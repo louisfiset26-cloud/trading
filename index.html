@@ -58,6 +58,20 @@
     .muted { color:var(--muted); }
     .small { font-size:13px; }
     .notice { padding:12px 14px; border-radius:13px; background:#f3efff; color:#57449b; font-size:13px; line-height:1.45; }
+    .improvement-alert {
+      background:#fff0b8 !important;
+      color:#684400 !important;
+      border:3px solid #f0b323 !important;
+      box-shadow:0 0 0 4px #f0b32330, 0 8px 22px #9a6a1830;
+      font-weight:950 !important;
+      font-size:clamp(15px, 2.4vw, 21px) !important;
+      line-height:1.25 !important;
+      animation: alertPulse 1.2s ease-in-out infinite alternate;
+    }
+    @keyframes alertPulse {
+      from { transform:scale(1); }
+      to { transform:scale(1.015); }
+    }
     .error { background:#fff0f1; color:#a52e46; }
     .success { background:#e9faf3; color:#176b4d; }
     .room-top { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
@@ -142,16 +156,32 @@
       body.landscape-game #gamePanel:not(.hidden) {
         width: 100%;
         height: 100%;
+        min-height: 0;
         display: flex;
-        align-items: center;
+        flex-direction: column;
+        align-items: stretch;
         justify-content: center;
+        gap: 8px;
       }
-      body.landscape-game #gamePanel > *:not(.actions) {
+      body.landscape-game #gamePanel > *:not(.actions):not(#offerStatus) {
         display: none !important;
+      }
+      body.landscape-game #gamePanel #offerStatus {
+        display: block !important;
+        flex: 0 0 auto;
+        width: 100%;
+        max-height: 30%;
+        overflow: auto;
+        padding: 10px 14px;
+        text-align: center;
+        font-size: clamp(14px, 2.6vh, 21px) !important;
+        line-height: 1.2 !important;
       }
       body.landscape-game #gamePanel .actions {
         width: 100%;
-        height: 100%;
+        height: auto;
+        min-height: 0;
+        flex: 1 1 auto;
         grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
         gap: 10px !important;
       }
@@ -523,7 +553,11 @@ async function joinRoom() {
               room.lastResult = "accepted";
             }
           } else if (action === "improve") {
+            // Une demande de meilleure offre annule l'acceptation déjà donnée
+            // par l'autre joueur : il doit pouvoir répondre à la nouvelle offre.
+            room[otherKey] = false;
             room.improveRequestedBy = myPlayerNumber;
+            room.lastResult = null;
           } else if (action === "reject") {
             // Un seul refus termine immédiatement le round.
             room.round = (room.round || 1) + 1;
