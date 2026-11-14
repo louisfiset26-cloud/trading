@@ -216,6 +216,10 @@
       busy = value;
       $("createBtn").disabled = value;
       $("joinBtn").disabled = value;
+      ["acceptBtn", "improveBtn", "rejectBtn"].forEach(id => {
+        const button = $(id);
+        if (button) button.disabled = value;
+      });
     }
     function makeCode() {
       const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -403,15 +407,17 @@ async function joinRoom() {
         $("offerStatus").textContent = "Les deux joueurs peuvent répondre à l'offre.";
       }
 
-      const canAct = !myAccepted && !requestBy && !busy;
+      const canAct = !myAccepted && requestBy !== myPlayerNumber && !busy;
       $("acceptBtn").disabled = !canAct;
       $("improveBtn").disabled = !canAct;
       $("rejectBtn").disabled = !canAct;
       $("actionHint").textContent = myAccepted
         ? "Ton acceptation est enregistrée pour ce round."
         : (requestBy === myPlayerNumber
-          ? "Tu as demandé une amélioration."
-          : "✓ Accepter · ＋ Demander une amélioration · ✕ Refuser");
+          ? "Tu as demandé une amélioration. L'autre joueur doit répondre."
+          : (requestBy
+            ? "Réponds à la demande d'amélioration : accepte, redemande une amélioration ou refuse."
+            : "✓ Accepter · ＋ Demander une amélioration · ✕ Refuser"));
     }
 
     async function submitDecision(action) {
@@ -427,9 +433,10 @@ async function joinRoom() {
           const otherKey = myPlayerNumber === 1 ? "accepted2" : "accepted1";
 
           // Une décision déjà prise ne peut pas être modifiée pendant le round.
-          if (room[mineKey] || room.improveRequestedBy) return;
+          if (room[mineKey] || room.improveRequestedBy === myPlayerNumber) return;
 
           if (action === "accept") {
+            room.improveRequestedBy = null;
             room[mineKey] = true;
 
             // Le round se termine uniquement lorsque les deux ont accepté.
