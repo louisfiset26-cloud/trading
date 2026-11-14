@@ -159,10 +159,15 @@
           <div id="starterText" class="small">Le joueur 1 commence ce round</div>
           <div id="turnMessage" class="turn-message">À toi de jouer !</div>
         </div>
-        <div class="small muted center" id="turnOrderText">Ordre du round : Joueur 1 → Joueur 2</div>
+        <div class="notice center" id="offerStatus">Les deux joueurs peuvent répondre à l'offre.</div>
         <div class="progress"><div id="progressBar"></div></div>
-        <p id="progressText" class="small muted center">0 / 2 tours terminés</p>
-        <button id="finishTurnBtn" class="btn primary full">Terminer mon tour ✓</button>
+        <p id="progressText" class="small muted center">0 / 2 joueurs ont accepté</p>
+        <div class="actions" style="grid-template-columns:1fr 1fr 1fr;gap:8px">
+          <button id="acceptBtn" class="btn" style="background:#ddf5e8;color:#16834b">✓ Accept</button>
+          <button id="improveBtn" class="btn" style="background:#fff0cc;color:#946000">＋</button>
+          <button id="rejectBtn" class="btn danger">✕</button>
+        </div>
+        <p id="actionHint" class="small muted center">✓ Accepter · ＋ Demander une amélioration · ✕ Refuser</p>
         <p id="gameStatus" class="notice hidden" role="status"></p>
       </div>
 
@@ -211,7 +216,6 @@
       busy = value;
       $("createBtn").disabled = value;
       $("joinBtn").disabled = value;
-      $("finishTurnBtn").disabled = value;
     }
     function makeCode() {
       const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -246,7 +250,11 @@
                 starter: 1,
                 currentPlayer: 1,
                 moved1: false,
-                moved2: false
+                moved2: false,
+                accepted1: false,
+                accepted2: false,
+                improveRequestedBy: null,
+                lastResult: null
               };
             }
             return;
@@ -360,52 +368,101 @@ async function joinRoom() {
 
     function renderRoom(room) {
       const p2Joined = !!room.player2;
-      $("player1Tag").textContent = room.currentPlayer === 1 && p2Joined ? "À son tour" : "Connecté";
-      $("player2Tag").textContent = !p2Joined ? "En attente" : (room.currentPlayer === 2 ? "À son tour" : "Connecté");
-      $("player1Card").classList.toggle("active", p2Joined && room.currentPlayer === 1);
-      $("player2Card").classList.toggle("active", p2Joined && room.currentPlayer === 2);
+      $("player1Tag").textContent = !p2Joined ? "Créateur" : (room.accepted1 ? "A accepté ✓" : "En attente");
+      $("player2Tag").textContent = !p2Joined ? "En attente" : (room.accepted2 ? "A accepté ✓" : "En attente");
+      $("player1Card").classList.toggle("active", p2Joined && !!room.accepted1);
+      $("player2Card").classList.toggle("active", p2Joined && !!room.accepted2);
       $("player2Card").classList.toggle("waiting", !p2Joined);
       $("waitingPanel").classList.toggle("hidden", p2Joined);
       $("gamePanel").classList.toggle("hidden", !p2Joined);
       if (!p2Joined) return;
 
       $("roundNumber").textContent = room.round || 1;
-      $("starterText").textContent = `Le joueur ${room.starter} commence ce round`;
-      $("turnOrderText").textContent = `Ordre du round : Joueur ${room.starter} → Joueur ${3 - room.starter}`;
-      const mine = room.currentPlayer === myPlayerNumber;
-      $("turnMessage").textContent = mine ? "À toi de jouer !" : `Au joueur ${room.currentPlayer} de jouer…`;
-      $("finishTurnBtn").disabled = !mine || busy;
-      $("finishTurnBtn").textContent = mine ? "Terminer mon tour ✓" : "En attente de l'adversaire…";
-      const done = Number(!!room.moved1) + Number(!!room.moved2);
-      $("progressBar").style.width = (done * 50) + "%";
-      $("progressText").textContent = `${done} / 2 tours terminés`;
+      $("starterText").textContent = "Décision des deux joueurs";
+      $("turnOrderText").textContent = "";
+      const accepted = Number(!!room.accepted1) + Number(!!room.accepted2);
+      $("progressBar").style.width = (accepted * 50) + "%";
+      $("progressText").textContent = `${accepted} / 2 joueurs ont accepté`;
+
+      const myAccepted = myPlayerNumber === 1 ? !!room.accepted1 : !!room.accepted2;
+      const otherAccepted = myPlayerNumber === 1 ? !!room.accepted2 : !!room.accepted1;
+      const requestBy = room.improveRequestedBy;
+      if (room.lastResult === "rejected") {
+        $("offerStatus").textContent = "L'offre précédente a été refusée. Nouveau round !";
+      } else if (room.lastResult === "accepted") {
+        $("offerStatus").textContent = "Les deux joueurs ont accepté ! Nouveau round.";
+      } else if (requestBy) {
+        $("offerStatus").textContent = requestBy === myPlayerNumber
+          ? "Tu as demandé une amélioration. En attente de l'autre joueur."
+          : "L'autre joueur demande une amélioration de ton offre.";
+      } else if (myAccepted) {
+        $("offerStatus").textContent = "Tu as accepté. En attente de l'autre joueur.";
+      } else if (otherAccepted) {
+        $("offerStatus").textContent = "L'autre joueur a accepté. À toi de répondre.";
+      } else {
+        $("offerStatus").textContent = "Les deux joueurs peuvent répondre à l'offre.";
+      }
+
+      const canAct = !myAccepted && !requestBy && !busy;
+      $("acceptBtn").disabled = !canAct;
+      $("improveBtn").disabled = !canAct;
+      $("rejectBtn").disabled = !canAct;
+      $("actionHint").textContent = myAccepted
+        ? "Ton acceptation est enregistrée pour ce round."
+        : (requestBy === myPlayerNumber
+          ? "Tu as demandé une amélioration."
+          : "✓ Accepter · ＋ Demander une amélioration · ✕ Refuser");
     }
 
-    async function finishTurn() {
-      if (busy || !roomRef || !currentRoomData) return;
+    async function submitDecision(action) {
+      if (busy || !roomRef || !currentRoomData || !currentRoomData.player2) return;
       setBusy(true);
       hideStatus("gameStatus");
+
       try {
         const result = await roomRef.transaction(room => {
-          if (!room || room.status !== "playing" || room.currentPlayer !== myPlayerNumber) return;
-          const mineKey = myPlayerNumber === 1 ? "moved1" : "moved2";
-          const otherKey = myPlayerNumber === 1 ? "moved2" : "moved1";
-          room[mineKey] = true;
-          if (room[otherKey]) {
+          if (!room || room.status !== "playing" || !room.player2) return;
+
+          const mineKey = myPlayerNumber === 1 ? "accepted1" : "accepted2";
+          const otherKey = myPlayerNumber === 1 ? "accepted2" : "accepted1";
+
+          // Une décision déjà prise ne peut pas être modifiée pendant le round.
+          if (room[mineKey] || room.improveRequestedBy) return;
+
+          if (action === "accept") {
+            room[mineKey] = true;
+
+            // Le round se termine uniquement lorsque les deux ont accepté.
+            if (room[otherKey]) {
+              room.round = (room.round || 1) + 1;
+              room.accepted1 = false;
+              room.accepted2 = false;
+              room.improveRequestedBy = null;
+              room.lastResult = "accepted";
+            }
+          } else if (action === "improve") {
+            room.improveRequestedBy = myPlayerNumber;
+          } else if (action === "reject") {
+            // Un seul refus termine immédiatement le round.
             room.round = (room.round || 1) + 1;
-            room.starter = room.starter === 1 ? 2 : 1;
-            room.currentPlayer = room.starter;
-            room.moved1 = false;
-            room.moved2 = false;
-          } else {
-            room.currentPlayer = 3 - myPlayerNumber;
+            room.accepted1 = false;
+            room.accepted2 = false;
+            room.improveRequestedBy = null;
+            room.lastResult = "rejected";
           }
+
           return room;
         }, undefined, false);
-        if (!result.committed) showStatus("gameStatus", "Ce n'est pas ton tour, ou le tour a déjà été terminé.", "error");
+
+        if (!result.committed) {
+          showStatus("gameStatus", "Ta décision n'a pas été enregistrée. Vérifie que tu n'as pas déjà répondu.", "error");
+        }
       } catch (error) {
         showStatus("gameStatus", friendlyError(error), "error");
-      } finally { setBusy(false); if (currentRoomData) renderRoom(currentRoomData); }
+      } finally {
+        setBusy(false);
+        if (currentRoomData) renderRoom(currentRoomData);
+      }
     }
 
     function leaveRoom() {
@@ -433,7 +490,9 @@ async function joinRoom() {
     $("joinBtn").addEventListener("click", joinRoom);
     $("roomCodeInput").addEventListener("input", e => e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,6));
     $("roomCodeInput").addEventListener("keydown", e => { if (e.key === "Enter") joinRoom(); });
-    $("finishTurnBtn").addEventListener("click", finishTurn);
+    $("acceptBtn").addEventListener("click", () => submitDecision("accept"));
+    $("improveBtn").addEventListener("click", () => submitDecision("improve"));
+    $("rejectBtn").addEventListener("click", () => submitDecision("reject"));
     $("leaveBtn").addEventListener("click", leaveRoom);
     $("copyCodeBtn").addEventListener("click", async () => {
       try { await navigator.clipboard.writeText(currentRoomCode); showStatus("gameStatus", "Code copié ! Envoie-le à ton adversaire.", "success"); }
