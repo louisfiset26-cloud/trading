@@ -11,7 +11,59 @@
       --blue:#a8dfbd; --yellow:#f2d477; --ink:#173b2a;
       --muted:#617b6b; --bg:#f1f8f2; --white:#fff;
       --line:#d8e9dc; --green:#239b70; --red:#d94d67;
+      --surface-tint:#eaf6ed; --soft-text:#245d39;
     }
+    body[data-theme="halloween"] {
+      --purple:#f07818; --purple-dark:#bd4d08; --pink:#ffb15c;
+      --blue:#343434; --yellow:#ffc04d; --ink:#21170f;
+      --muted:#77685b; --bg:#171411; --line:#49301e;
+      --surface-tint:#302116; --soft-text:#ffd0a0;
+      --green:#e58a25; --red:#d94d67;
+      background:
+        radial-gradient(circle at 8% 10%, #46270f 0, transparent 28%),
+        radial-gradient(circle at 92% 12%, #38200e 0, transparent 28%),
+        var(--bg);
+    }
+    body[data-theme="christmas"] {
+      --purple:#c62835; --purple-dark:#941d28; --pink:#e9a0a5;
+      --blue:#c8e8d0; --yellow:#f2d477; --ink:#173b2a;
+      --muted:#617b6b; --bg:#f3f8f1; --line:#d9e8d7;
+      --surface-tint:#e5f2e4; --soft-text:#245d39;
+      --green:#27834b; --red:#c62835;
+      background:
+        radial-gradient(circle at 8% 10%, #f6dfe0 0, transparent 27%),
+        radial-gradient(circle at 92% 12%, #d9efdc 0, transparent 27%),
+        var(--bg);
+    }
+    body[data-theme="normal"] {
+      background:
+        radial-gradient(circle at 8% 10%, var(--surface-tint) 0, transparent 27%),
+        radial-gradient(circle at 92% 12%, var(--surface-tint) 0, transparent 27%),
+        var(--bg);
+    }
+    body[data-theme="halloween"] .card { background:rgba(35,29,24,.96); color:#fff0df; }
+    body[data-theme="halloween"] input { background:#211b16; color:#fff0df; }
+    body[data-theme="halloween"] .player { background:#282019; }
+    body[data-theme="halloween"] .tag { background:#44301f; color:#ffd0a0; }
+    body[data-theme="halloween"] .soft { background:#49301e; color:#ffd0a0; }
+    body[data-theme="christmas"] .soft { background:#e5f2e4; color:#245d39; }
+    body[data-theme="christmas"] .pink { background:#f9e2e3; color:#941d28; }
+    body[data-theme="halloween"] .pink { background:#4a2b16; color:#ffd0a0; }
+    body[data-theme="halloween"] .notice:not(.error):not(.success):not(#opponentAction) {
+      background:#302116; color:#ffe0c0;
+    }
+    body[data-theme="christmas"] .notice:not(.error):not(.success):not(#opponentAction) {
+      background:#e5f2e4; color:#245d39;
+    }
+    body[data-theme="halloween"] .round-box { background:#302116; }
+    body[data-theme="halloween"] .progress { background:#49301e; }
+    body[data-theme="christmas"] .progress { background:#dcebdc; }
+    body[data-theme="halloween"] .progress > div { background:linear-gradient(90deg,#f07818,#ffc04d); }
+    body[data-theme="christmas"] .progress > div { background:linear-gradient(90deg,#c62835,#27834b); }
+    body[data-theme="halloween"] #acceptBtn { background:#3c2b1c !important; color:#ffc04d !important; }
+    body[data-theme="christmas"] #acceptBtn { background:#dff0e1 !important; color:#176b37 !important; }
+    body[data-theme="halloween"] #improveBtn { background:#4a2b16 !important; color:#ffc04d !important; }
+    body[data-theme="christmas"] #improveBtn { background:#f8e7d5 !important; color:#9a4b13 !important; }
     * { box-sizing:border-box; }
     body {
       margin:0; min-height:100vh; color:var(--ink);
@@ -45,9 +97,20 @@
     .primary:hover { background:var(--purple-dark); }
     .pink { background:#ffe4ef; color:#a52e68; }
     .blue { background:#e1f5ff; color:#17658a; }
-    .soft { background:#e8f3ea; color:var(--purple-dark); }
+    .soft { background:var(--surface-tint); color:var(--purple-dark); }
     .danger { background:#fff0f1; color:var(--red); }
     .field { margin:15px 0; }
+    .settings-open { margin-top:14px; min-height:42px; padding:10px 18px; }
+    .theme-select {
+      width:100%; border:2px solid var(--line); border-radius:13px;
+      padding:14px 15px; background:#fff; color:var(--ink); font:inherit;
+    }
+    .color-picker-row { display:flex; align-items:center; gap:14px; }
+    .color-picker-row input[type="color"] {
+      width:72px; height:52px; padding:4px; cursor:pointer; flex:0 0 auto;
+    }
+    body[data-theme="halloween"] .theme-select { background:#211b16; color:#fff0df; }
+    body[data-theme="christmas"] .theme-select { background:#fff; color:#173b2a; }
     label { display:block; font-size:13px; font-weight:800; margin:0 0 7px 2px; }
     input {
       width:100%; border:2px solid var(--line); border-radius:13px;
@@ -57,7 +120,7 @@
     .code-input { text-transform:uppercase; letter-spacing:5px; font-size:22px; font-weight:900; text-align:center; }
     .muted { color:var(--muted); }
     .small { font-size:13px; }
-    .notice { padding:12px 14px; border-radius:13px; background:#eaf6ed; color:#245d39; font-size:13px; line-height:1.45; }
+    .notice { padding:12px 14px; border-radius:13px; background:var(--surface-tint); color:var(--soft-text); font-size:13px; line-height:1.45; }
     .improvement-alert {
       background:#fff0b8 !important;
       color:#684400 !important;
@@ -74,6 +137,21 @@
     }
     .error { background:#fff0f1; color:#a52e46; }
     .success { background:#e9faf3; color:#176b4d; }
+    #opponentAction.opponent-action-accept {
+      background:#d9f1e0 !important; color:#145c32 !important;
+      border:2px solid #39a96b !important;
+    }
+    #opponentAction.opponent-action-improve {
+      background:#fff0c2 !important; color:#795000 !important;
+      border:2px solid #e5ae28 !important;
+    }
+    #opponentAction.opponent-action-reject {
+      background:#ffe1e1 !important; color:#8d202b !important;
+      border:2px solid #dc5965 !important;
+    }
+    #opponentAction.opponent-action-none {
+      background:var(--surface-tint); color:var(--soft-text); border:2px solid transparent;
+    }
     .room-top { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
     .room-code {
       background:#e4f2e7; color:var(--purple-dark); padding:10px 15px;
@@ -92,6 +170,7 @@
     .tag { display:inline-block; border-radius:999px; padding:5px 9px; font-size:11px; font-weight:900; background:#f0edf5; color:var(--muted); }
     .active .tag { background:#dcefe1; color:var(--purple-dark); }
     .round-box {
+      display:none !important;
       text-align:center;
       background:transparent;
       color:var(--ink);
@@ -121,7 +200,7 @@
     footer { text-align:center; color:#938da4; font-size:12px; padding:12px; }
     @media (orientation: portrait) and (max-width: 900px) {
       #gamePanel .round-box {
-        display:block;
+        display:block !important;
         position:absolute;
         top:8px;
         right:10px;
@@ -136,6 +215,12 @@
       #gamePanel .round-number {
         color:#10663a;
         font-size:16px;
+      }
+    }
+    @media (orientation: landscape) {
+      #gamePanel .round-box {
+        display:none !important;
+        visibility:hidden !important;
       }
     }
     @media(max-width:520px) {
@@ -200,7 +285,7 @@
         display: none !important;
       }
       body.landscape-game #gamePanel .round-box {
-        display:block !important;
+        display:none !important;
         flex:0 0 auto;
         margin:0;
         padding:0 0 2px;
@@ -250,7 +335,33 @@
       <div class="logo">💜✨</div>
       <h1><span class="brand">Fidget Toy</span> Trading</h1>
       <p class="subtitle">Deux joueurs, deux téléphones, un trading synchronisé.</p>
+      <button id="openSettingsBtn" class="btn soft settings-open">⚙ Paramètres</button>
     </header>
+
+    <section id="settingsPage" class="card hidden">
+      <div class="room-top">
+        <h2>⚙ Paramètres</h2>
+        <button id="backSettingsBtn" class="btn soft">← Retour</button>
+      </div>
+      <p class="muted">Choisis l'apparence de Fidget Toy Trading. Le thème est enregistré sur cet appareil.</p>
+
+      <div class="field">
+        <label for="themeSelect">Thème</label>
+        <select id="themeSelect" class="theme-select">
+          <option value="normal">Thème normal — couleur au choix</option>
+          <option value="halloween">Thème Halloween — noir et orange</option>
+          <option value="christmas">Thème Noël — rouge et vert</option>
+        </select>
+      </div>
+      <div id="normalColorPanel" class="field">
+        <label for="themeColor">Couleur principale du thème normal</label>
+        <div class="color-picker-row">
+          <input id="themeColor" type="color" value="#16834b" aria-label="Choisir la couleur principale">
+          <span class="muted small">Choisis ta couleur préférée.</span>
+        </div>
+      </div>
+      <div class="notice">Ton choix s'applique immédiatement et reste enregistré même après avoir fermé le site.</div>
+    </section>
 
     <section id="home" class="card">
       <h2>Bienvenue !</h2>
@@ -341,6 +452,12 @@
     const db = firebase.database();
 
     const $ = id => document.getElementById(id);
+    let savedTheme = "normal";
+    let savedThemeColor = "#16834b";
+    try {
+      savedTheme = localStorage.getItem("fidgetTradingTheme") || "normal";
+      savedThemeColor = localStorage.getItem("fidgetTradingColor") || "#16834b";
+    } catch (_) {}
     function updateOrientationMode() {
       document.body.classList.toggle(
         "landscape-game",
@@ -350,6 +467,60 @@
     }
     window.addEventListener("resize", updateOrientationMode);
     window.addEventListener("orientationchange", updateOrientationMode);
+
+
+    function hexToRgb(hex) {
+      const value = hex.replace("#", "");
+      return {
+        r: parseInt(value.slice(0, 2), 16),
+        g: parseInt(value.slice(2, 4), 16),
+        b: parseInt(value.slice(4, 6), 16)
+      };
+    }
+    function shadeColor(hex, amount) {
+      const { r, g, b } = hexToRgb(hex);
+      const mix = channel => Math.round(channel + (amount < 0 ? channel : 255 - channel) * amount);
+      return "#" + [mix(r), mix(g), mix(b)].map(v => v.toString(16).padStart(2, "0")).join("");
+    }
+    function applyTheme(theme, chosenColor) {
+      const allowed = ["normal", "halloween", "christmas"];
+      if (!allowed.includes(theme)) theme = "normal";
+      document.body.dataset.theme = theme;
+      const color = /^#[0-9a-f]{6}$/i.test(chosenColor || "") ? chosenColor : "#16834b";
+      if (theme === "normal") {
+        document.documentElement.style.setProperty("--purple", color);
+        document.documentElement.style.setProperty("--purple-dark", shadeColor(color, -0.22));
+        document.documentElement.style.setProperty("--pink", shadeColor(color, 0.55));
+        document.documentElement.style.setProperty("--surface-tint", shadeColor(color, 0.88));
+        document.documentElement.style.setProperty("--soft-text", shadeColor(color, -0.42));
+        document.documentElement.style.setProperty("--line", shadeColor(color, 0.78));
+        document.documentElement.style.setProperty("--bg", shadeColor(color, 0.94));
+      } else {
+        ["--purple","--purple-dark","--pink","--surface-tint","--soft-text","--line","--bg"].forEach(name => {
+          document.documentElement.style.removeProperty(name);
+        });
+      }
+      $("themeSelect").value = theme;
+      $("themeColor").value = color;
+      $("normalColorPanel").classList.toggle("hidden", theme !== "normal");
+      try {
+        localStorage.setItem("fidgetTradingTheme", theme);
+        localStorage.setItem("fidgetTradingColor", color);
+      } catch (_) {}
+    }
+    let settingsReturnTo = "home";
+    function openSettings() {
+      settingsReturnTo = $("room").classList.contains("hidden") ? "home" : "room";
+      $("home").classList.add("hidden");
+      $("room").classList.add("hidden");
+      $("settingsPage").classList.remove("hidden");
+      document.body.classList.remove("landscape-game");
+    }
+    function closeSettings() {
+      $("settingsPage").classList.add("hidden");
+      $(settingsReturnTo).classList.remove("hidden");
+      updateOrientationMode();
+    }
 
     let currentRoomCode = null;
     let myPlayerNumber = null;
@@ -549,15 +720,24 @@ async function joinRoom() {
       const requestBy = room.improveRequestedBy;
       const lastActionBy = room.lastActionBy;
       const lastAction = room.lastAction;
+      const opponentActionBox = $("opponentAction");
+      opponentActionBox.classList.remove(
+        "opponent-action-accept",
+        "opponent-action-improve",
+        "opponent-action-reject",
+        "opponent-action-none"
+      );
       if (lastActionBy && lastAction && lastActionBy !== myPlayerNumber) {
         const actionLabels = {
           accept: "a accepté ✓",
           improve: "a demandé une amélioration ＋",
           reject: "a refusé ✕"
         };
-        $("opponentAction").textContent = "Dernière action de l'adversaire : " + (actionLabels[lastAction] || lastAction) + ".";
+        opponentActionBox.textContent = "Dernière action de l'adversaire : " + (actionLabels[lastAction] || lastAction) + ".";
+        opponentActionBox.classList.add("opponent-action-" + lastAction);
       } else {
-        $("opponentAction").textContent = "Dernière action de l'adversaire : aucune pour le moment.";
+        opponentActionBox.textContent = "Dernière action de l'adversaire : aucune pour le moment.";
+        opponentActionBox.classList.add("opponent-action-none");
       }
       $("offerStatus").classList.toggle("improvement-alert", !!requestBy && requestBy !== myPlayerNumber);
       if (room.lastResult === "rejected") {
@@ -566,8 +746,8 @@ async function joinRoom() {
         $("offerStatus").textContent = "Les deux joueurs ont accepté ! Nouveau round.";
       } else if (requestBy) {
         $("offerStatus").textContent = requestBy === myPlayerNumber
-          ? "📨 DEMANDE ENVOYÉE : l'autre joueur doit améliorer son offre avant de continuer."
-          : "🔔 DEMANDE D'AMÉLIORATION : l'autre joueur te demande d'AJOUTER quelque chose à ton offre ! Améliore ton offre, puis choisis ✓, ＋ ou ✕.";
+          ? "📨 DEMANDE ENVOYÉE : l'autre joueur doit améliorer son offre avant de continuer ou refuser X."
+          : "🔔 DEMANDE D'AMÉLIORATION : l'autre joueur te demande d'AJOUTER quelque chose à ton offre ! Améliore ton offre ou refuse X.";
       } else if (myAccepted) {
         $("offerStatus").textContent = "Tu as accepté. En attente de l'autre joueur.";
       } else if (otherAccepted) {
@@ -668,6 +848,12 @@ async function joinRoom() {
       if (/api-key-not-valid/i.test(message)) return "La configuration Firebase semble incorrecte. Vérifie les paramètres de l'application Web.";
       return message;
     }
+
+    applyTheme(savedTheme, savedThemeColor);
+    $("openSettingsBtn").addEventListener("click", openSettings);
+    $("backSettingsBtn").addEventListener("click", closeSettings);
+    $("themeSelect").addEventListener("change", () => applyTheme($("themeSelect").value, $("themeColor").value));
+    $("themeColor").addEventListener("input", () => applyTheme("normal", $("themeColor").value));
 
     $("createBtn").addEventListener("click", createRoom);
     $("showJoinBtn").addEventListener("click", () => {
