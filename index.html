@@ -523,9 +523,9 @@
     }
 
 
-    // Sons courts générés directement par le navigateur (aucun fichier externe requis).
+    // Sons générés par le navigateur (aucun fichier externe requis).
     let soundContext = null;
-    function playTone(frequency, duration, wave = "sine", volume = 0.16, delay = 0) {
+    function playTone(frequency, duration, wave = "sine", volume = 0.16, delay = 0, endFrequency = null) {
       try {
         const AudioCtx = window.AudioContext || window.webkitAudioContext;
         if (!AudioCtx) return;
@@ -536,15 +536,19 @@
         const gain = soundContext.createGain();
         oscillator.type = wave;
         oscillator.frequency.setValueAtTime(frequency, start);
+        if (endFrequency !== null) {
+          oscillator.frequency.exponentialRampToValueAtTime(Math.max(1, endFrequency), start + duration);
+        }
         gain.gain.setValueAtTime(0.0001, start);
-        gain.gain.exponentialRampToValueAtTime(volume, start + 0.015);
+        gain.gain.exponentialRampToValueAtTime(volume, start + 0.025);
         gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
         oscillator.connect(gain);
         gain.connect(soundContext.destination);
         oscillator.start(start);
-        oscillator.stop(start + duration + 0.02);
+        oscillator.stop(start + duration + 0.03);
       } catch (_) {}
     }
+
     function playSound(name) {
       if (name === "accept") {
         playTone(660, 0.12, "sine", 0.13);
@@ -553,15 +557,76 @@
         playTone(520, 0.11, "triangle", 0.14);
         playTone(390, 0.16, "triangle", 0.14, 0.12);
       } else if (name === "reject") {
-        playTone(240, 0.2, "sawtooth", 0.10);
+        // Son de refus plus long, grave et descendant.
+        playTone(330, 0.55, "sawtooth", 0.11, 0, 125);
+        playTone(220, 0.65, "triangle", 0.12, 0.48, 75);
       } else if (name === "bothAccepted") {
-        playTone(523, 0.14, "sine", 0.14);
-        playTone(659, 0.14, "sine", 0.14, 0.14);
-        playTone(784, 0.22, "sine", 0.15, 0.28);
+        // Mélodie de victoire différente des sons des boutons.
+        playTone(523, 0.22, "sine", 0.15, 0);
+        playTone(659, 0.22, "sine", 0.15, 0.18);
+        playTone(784, 0.22, "sine", 0.16, 0.36);
+        playTone(1047, 0.62, "sine", 0.17, 0.54);
+        playTone(1318, 0.48, "triangle", 0.10, 0.72);
       }
     }
-    let previousAcceptedRound = null;
-    let previousAcceptedState = false;
+
+    function launchConfetti() {
+      const canvas = document.createElement("canvas");
+      canvas.setAttribute("aria-hidden", "true");
+      Object.assign(canvas.style, {
+        position: "fixed", inset: "0", width: "100vw", height: "100vh",
+        pointerEvents: "none", zIndex: "99999"
+      });
+      document.body.appendChild(canvas);
+      const ctx = canvas.getContext("2d");
+      if (!ctx) { canvas.remove(); return; }
+
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const resize = () => {
+        canvas.width = Math.floor(window.innerWidth * dpr);
+        canvas.height = Math.floor(window.innerHeight * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      };
+      resize();
+
+      const colors = ["#ffb703", "#fb5607", "#8338ec", "#3a86ff", "#06d6a0", "#ff4d6d"];
+      const pieces = Array.from({ length: 155 }, () => ({
+        x: Math.random() * window.innerWidth,
+        y: -20 - Math.random() * window.innerHeight * 0.55,
+        vx: (Math.random() - 0.5) * 5,
+        vy: 2 + Math.random() * 5,
+        size: 5 + Math.random() * 7,
+        rotation: Math.random() * Math.PI,
+        spin: (Math.random() - 0.5) * 0.22,
+        color: colors[Math.floor(Math.random() * colors.length)]
+      }));
+
+      const started = performance.now();
+      function frame(now) {
+        const elapsed = now - started;
+        ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+        for (const p of pieces) {
+          p.x += p.vx;
+          p.y += p.vy;
+          p.vy += 0.045;
+          p.rotation += p.spin;
+          ctx.save();
+          ctx.translate(p.x, p.y);
+          ctx.rotate(p.rotation);
+          ctx.fillStyle = p.color;
+          ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 0.65);
+          ctx.restore();
+        }
+        if (elapsed < 2600) {
+          requestAnimationFrame(frame);
+        } else {
+          canvas.remove();
+        }
+      }
+      requestAnimationFrame(frame);
+    }
+
+    let previousResultEventKey = null;
 
     let currentRoomCode = null;
     let myPlayerNumber = null;
@@ -755,13 +820,21 @@ async function joinRoom() {
       $("starterText").textContent = "Décision des deux joueurs";
       const accepted = Number(!!room.accepted1) + Number(!!room.accepted2);
       $("progressBar").style.width = (accepted * 50) + "%";
-      const bothAcceptedNow = !!room.accepted1 && !!room.accepted2;
-      const acceptedRoundKey = String(room.round || 1) + ":" + String(room.lastResult || "");
-      if (bothAcceptedNow && (!previousAcceptedState || previousAcceptedRound !== acceptedRoundKey)) {
-        playSound("bothAccepted");
+      // Le résultat est enregistré dans Firebase et reçu par les deux téléphones.
+      // On utilise un identifiant d'événement pour que chaque appareil joue le son
+      // une seule fois, même si Firebase déclenche plusieurs rendus.
+      const resultEventKey = room.lastResult
+        ? String(room.round || 1) + ":" + String(room.lastResult) + ":" + String(room.lastActionBy || "")
+        : null;
+      if (resultEventKey && resultEventKey !== previousResultEventKey) {
+        if (room.lastResult === "accepted") {
+          playSound("bothAccepted");
+          launchConfetti();
+        } else if (room.lastResult === "rejected") {
+          playSound("reject");
+        }
       }
-      previousAcceptedState = bothAcceptedNow;
-      previousAcceptedRound = acceptedRoundKey;
+      previousResultEventKey = resultEventKey;
 
       const myAccepted = myPlayerNumber === 1 ? !!room.accepted1 : !!room.accepted2;
       const otherAccepted = myPlayerNumber === 1 ? !!room.accepted2 : !!room.accepted1;
@@ -949,7 +1022,6 @@ async function joinRoom() {
       $("rejectBtn").textContent = "✕";
       $("rejectBtn").setAttribute("aria-label", "Refuser");
       $("rejectBtn").title = "Refuser";
-      playSound("reject");
       submitDecision("reject");
     });
     $("leaveBtn").addEventListener("click", leaveRoom);
