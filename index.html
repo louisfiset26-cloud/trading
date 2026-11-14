@@ -115,7 +115,7 @@
     }
 
     /* En mode paysage pendant une partie : écran épuré avec seulement les 3 choix. */
-    @media (orientation: landscape) and (max-height: 600px) {
+    @media (orientation: landscape) and (max-height: 900px) {
       body.landscape-game {
         min-height: 100dvh;
         overflow: hidden;
@@ -163,19 +163,21 @@
         justify-content: center;
         gap: 8px;
       }
-      body.landscape-game #gamePanel > *:not(.actions):not(#offerStatus) {
+      body.landscape-game #gamePanel > *:not(.actions):not(#offerStatus):not(#opponentAction) {
         display: none !important;
       }
-      body.landscape-game #gamePanel #offerStatus {
+      body.landscape-game #gamePanel #offerStatus,
+      body.landscape-game #gamePanel #opponentAction {
         display: block !important;
         flex: 0 0 auto;
         width: 100%;
-        max-height: 30%;
+        max-height: 24%;
         overflow: auto;
-        padding: 10px 14px;
+        padding: 7px 12px;
+        margin: 0;
         text-align: center;
-        font-size: clamp(14px, 2.6vh, 21px) !important;
-        line-height: 1.2 !important;
+        font-size: clamp(12px, 2.3vh, 19px) !important;
+        line-height: 1.15 !important;
       }
       body.landscape-game #gamePanel .actions {
         width: 100%;
@@ -256,9 +258,10 @@
           <div id="turnMessage" class="turn-message">À toi de jouer !</div>
         </div>
         <div class="notice center" id="offerStatus" role="alert" aria-live="assertive">Les deux joueurs peuvent répondre à l'offre.</div>
+        <div class="notice center" id="opponentAction" aria-live="polite">Dernière action de l'adversaire : aucune pour le moment.</div>
         <div class="progress"><div id="progressBar"></div></div>
         <div class="actions" style="grid-template-columns:1fr 1fr 1fr;gap:8px">
-          <button id="acceptBtn" class="btn" style="background:#ddf5e8;color:#16834b">✓ Accept</button>
+          <button id="acceptBtn" class="btn" aria-label="Accepter" title="Accepter" style="background:#ddf5e8;color:#16834b">✓</button>
           <button id="improveBtn" class="btn" style="background:#fff0cc;color:#946000">＋</button>
           <button id="rejectBtn" class="btn danger">✕</button>
         </div>
@@ -296,7 +299,7 @@
     function updateOrientationMode() {
       document.body.classList.toggle(
         "landscape-game",
-        window.matchMedia("(orientation: landscape) and (max-height: 600px)").matches &&
+        window.matchMedia("(orientation: landscape) and (max-height: 900px)").matches &&
         !$("room").classList.contains("hidden")
       );
     }
@@ -309,6 +312,8 @@
     let roomRef = null;
     let currentRoomData = null;
     let busy = false;
+    let rejectArmed = false;
+    let rejectTimer = null;
 
     function showStatus(id, message, type = "") {
       const el = $(id);
@@ -363,7 +368,9 @@
                 accepted1: false,
                 accepted2: false,
                 improveRequestedBy: null,
-                lastResult: null
+                lastResult: null,
+                lastActionBy: null,
+                lastAction: null
               };
             }
             return;
@@ -495,6 +502,18 @@ async function joinRoom() {
       const myAccepted = myPlayerNumber === 1 ? !!room.accepted1 : !!room.accepted2;
       const otherAccepted = myPlayerNumber === 1 ? !!room.accepted2 : !!room.accepted1;
       const requestBy = room.improveRequestedBy;
+      const lastActionBy = room.lastActionBy;
+      const lastAction = room.lastAction;
+      if (lastActionBy && lastAction && lastActionBy !== myPlayerNumber) {
+        const actionLabels = {
+          accept: "a accepté ✓",
+          improve: "a demandé une amélioration ＋",
+          reject: "a refusé ✕"
+        };
+        $("opponentAction").textContent = "Dernière action de l'adversaire : " + (actionLabels[lastAction] || lastAction) + ".";
+      } else {
+        $("opponentAction").textContent = "Dernière action de l'adversaire : aucune pour le moment.";
+      }
       $("offerStatus").classList.toggle("improvement-alert", !!requestBy && requestBy !== myPlayerNumber);
       if (room.lastResult === "rejected") {
         $("offerStatus").textContent = "L'offre précédente a été refusée. Nouveau round !";
@@ -539,6 +558,9 @@ async function joinRoom() {
 
           // Une décision déjà prise ne peut pas être modifiée pendant le round.
           if (room[mineKey] || room.improveRequestedBy === myPlayerNumber) return;
+
+          room.lastActionBy = myPlayerNumber;
+          room.lastAction = action;
 
           if (action === "accept") {
             room.improveRequestedBy = null;
@@ -607,9 +629,44 @@ async function joinRoom() {
     $("joinBtn").addEventListener("click", joinRoom);
     $("roomCodeInput").addEventListener("input", e => e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,6));
     $("roomCodeInput").addEventListener("keydown", e => { if (e.key === "Enter") joinRoom(); });
-    $("acceptBtn").addEventListener("click", () => submitDecision("accept"));
-    $("improveBtn").addEventListener("click", () => submitDecision("improve"));
-    $("rejectBtn").addEventListener("click", () => submitDecision("reject"));
+    $("acceptBtn").addEventListener("click", () => {
+      rejectArmed = false;
+      if (rejectTimer) clearTimeout(rejectTimer);
+      $("rejectBtn").textContent = "✕";
+      $("rejectBtn").setAttribute("aria-label", "Refuser");
+      $("rejectBtn").title = "Refuser";
+      submitDecision("accept");
+    });
+    $("improveBtn").addEventListener("click", () => {
+      rejectArmed = false;
+      if (rejectTimer) clearTimeout(rejectTimer);
+      $("rejectBtn").textContent = "✕";
+      $("rejectBtn").setAttribute("aria-label", "Refuser");
+      $("rejectBtn").title = "Refuser";
+      submitDecision("improve");
+    });
+    $("rejectBtn").addEventListener("click", () => {
+      if (!rejectArmed) {
+        rejectArmed = true;
+        $("rejectBtn").textContent = "✕ ?";
+        $("rejectBtn").setAttribute("aria-label", "Confirmer le refus");
+        $("rejectBtn").title = "Clique encore pour confirmer le refus";
+        if (rejectTimer) clearTimeout(rejectTimer);
+        rejectTimer = setTimeout(() => {
+          rejectArmed = false;
+          $("rejectBtn").textContent = "✕";
+          $("rejectBtn").setAttribute("aria-label", "Refuser");
+          $("rejectBtn").title = "Refuser";
+        }, 4000);
+        return;
+      }
+      rejectArmed = false;
+      if (rejectTimer) clearTimeout(rejectTimer);
+      $("rejectBtn").textContent = "✕";
+      $("rejectBtn").setAttribute("aria-label", "Refuser");
+      $("rejectBtn").title = "Refuser";
+      submitDecision("reject");
+    });
     $("leaveBtn").addEventListener("click", leaveRoom);
     $("copyCodeBtn").addEventListener("click", async () => {
       try { await navigator.clipboard.writeText(currentRoomCode); showStatus("gameStatus", "Code copié ! Envoie-le à ton adversaire.", "success"); }
