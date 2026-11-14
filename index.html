@@ -161,7 +161,6 @@
         </div>
         <div class="notice center" id="offerStatus">Les deux joueurs peuvent répondre à l'offre.</div>
         <div class="progress"><div id="progressBar"></div></div>
-        <p id="progressText" class="small muted center">0 / 2 joueurs ont accepté</p>
         <div class="actions" style="grid-template-columns:1fr 1fr 1fr;gap:8px">
           <button id="acceptBtn" class="btn" style="background:#ddf5e8;color:#16834b">✓ Accept</button>
           <button id="improveBtn" class="btn" style="background:#fff0cc;color:#946000">＋</button>
@@ -198,6 +197,16 @@
     const db = firebase.database();
 
     const $ = id => document.getElementById(id);
+    function updateOrientationMode() {
+      document.body.classList.toggle(
+        "landscape-game",
+        window.matchMedia("(orientation: landscape) and (max-height: 600px)").matches &&
+        !$("room").classList.contains("hidden")
+      );
+    }
+    window.addEventListener("resize", updateOrientationMode);
+    window.addEventListener("orientationchange", updateOrientationMode);
+
     let currentRoomCode = null;
     let myPlayerNumber = null;
     let roomListener = null;
@@ -354,6 +363,7 @@ async function joinRoom() {
       roomRef = ref;
       $("home").classList.add("hidden");
       $("room").classList.remove("hidden");
+      updateOrientationMode();
       $("roomCodeDisplay").textContent = code;
       if (roomListener && roomRef) roomRef.off("value", roomListener);
       roomListener = snapshot => {
@@ -386,19 +396,19 @@ async function joinRoom() {
       $("turnOrderText").textContent = "";
       const accepted = Number(!!room.accepted1) + Number(!!room.accepted2);
       $("progressBar").style.width = (accepted * 50) + "%";
-      $("progressText").textContent = `${accepted} / 2 joueurs ont accepté`;
 
       const myAccepted = myPlayerNumber === 1 ? !!room.accepted1 : !!room.accepted2;
       const otherAccepted = myPlayerNumber === 1 ? !!room.accepted2 : !!room.accepted1;
       const requestBy = room.improveRequestedBy;
+      $("offerStatus").classList.toggle("improvement-alert", !!requestBy && requestBy !== myPlayerNumber);
       if (room.lastResult === "rejected") {
         $("offerStatus").textContent = "L'offre précédente a été refusée. Nouveau round !";
       } else if (room.lastResult === "accepted") {
         $("offerStatus").textContent = "Les deux joueurs ont accepté ! Nouveau round.";
       } else if (requestBy) {
         $("offerStatus").textContent = requestBy === myPlayerNumber
-          ? "Tu as demandé une amélioration. En attente de l'autre joueur."
-          : "L'autre joueur demande une amélioration de ton offre.";
+          ? "📨 DEMANDE ENVOYÉE : l'autre joueur doit améliorer son offre avant de continuer."
+          : "🔔 DEMANDE D'AMÉLIORATION : l'autre joueur te demande d'AJOUTER quelque chose à ton offre ! Améliore ton offre, puis choisis ✓, ＋ ou ✕.";
       } else if (myAccepted) {
         $("offerStatus").textContent = "Tu as accepté. En attente de l'autre joueur.";
       } else if (otherAccepted) {
@@ -477,6 +487,7 @@ async function joinRoom() {
       currentRoomCode = null; myPlayerNumber = null; roomListener = null; roomRef = null; currentRoomData = null;
       $("room").classList.add("hidden");
       $("home").classList.remove("hidden");
+      updateOrientationMode();
       $("joinPanel").classList.add("hidden");
       $("roomCodeInput").value = "";
       hideStatus("homeStatus");
