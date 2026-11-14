@@ -279,43 +279,60 @@ async function joinRoom() {
     const user = await ensureAuth();
     const ref = db.ref("rooms/" + code);
 
-    const result = await ref.transaction(room => {
-      if (!room) return;
+    // Vérifier que le code correspond à une partie existante.
+    const initialSnapshot = await ref.once("value");
+    if (!initialSnapshot.exists()) {
+      throw new Error("Code introuvable. Vérifie les 6 caractères du code.");
+    }
 
-      // Le joueur 1 retrouve sa partie
-      if (room.player1 === user.uid) return room;
+    const initialRoom = initialSnapshot.val();
 
-      // Le joueur 2 retrouve sa place
-      if (room.player2 === user.uid) return room;
+    // Le créateur retrouve sa partie avec le même compte anonyme.
+    if (initialRoom.player1 === user.uid) {
+      myPlayerNumber = 1;
+      await enterRoom(code, ref);
+      return;
+    }
 
-      // Une autre personne a déjà rejoint
-      if (room.player2) return;
+    // Le joueur 2 retrouve sa place s'il est déjà inscrit.
+    if (initialRoom.player2 === user.uid) {
+      myPlayerNumber = 2;
+      await enterRoom(code, ref);
+      return;
+    }
 
-      room.player2 = user.uid;
-      room.status = "playing";
-      return room;
+    // Réserver seulement la place 2 avec une transaction atomique.
+    const seatResult = await ref.child("player2").transaction(currentPlayer2 => {
+      if (currentPlayer2 === null) return user.uid;
+      if (currentPlayer2 === user.uid) return currentPlayer2;
+      return;
     }, undefined, false);
 
-    if (!result.committed) {
-      throw new Error("Partie introuvable ou déjà pleine.");
+    if (!seatResult.committed) {
+      const latestSnapshot = await ref.once("value");
+      if (!latestSnapshot.exists()) {
+        throw new Error("Cette partie n'existe plus. Demande un nouveau code.");
+      }
+      const latestRoom = latestSnapshot.val();
+
+      if (latestRoom.player2 && latestRoom.player2 !== user.uid) {
+        throw new Error("Cette partie est déjà pleine. Demande à ton ami de créer une nouvelle partie.");
+      }
+
+      throw new Error("Firebase n'a pas pu réserver ta place. Vérifie les règles de la base de données et réessaie.");
     }
 
-    const room = result.snapshot.val();
+    // Activer la partie une fois le joueur 2 inscrit.
+    await ref.child("status").set("playing");
 
-    if (room.player1 === user.uid) {
-      myPlayerNumber = 1;
-    } else if (room.player2 === user.uid) {
-      myPlayerNumber = 2;
-    } else {
-      throw new Error("Impossible de déterminer ton joueur.");
-    }
-
+    myPlayerNumber = 2;
     await enterRoom(code, ref);
 
   } catch (error) {
     showStatus("homeStatus", friendlyError(error), "error");
   } finally {
     setBusy(false);
+    if (currentRoomData) renderRoom(currentRoomData);
   }
 }
 
