@@ -3,22 +3,22 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#7657e8">
+  <meta name="theme-color" content="#16834b">
   <title>Fidget Toy Trading</title>
   <style>
     :root {
-      --purple:#7657e8; --purple-dark:#5c3ecb; --pink:#ff75ad;
-      --blue:#69c8f2; --yellow:#ffd66e; --ink:#292342;
-      --muted:#77718c; --bg:#f7f4ff; --white:#fff;
-      --line:#e9e3f6; --green:#239b70; --red:#d94d67;
+      --purple:#16834b; --purple-dark:#10663a; --pink:#72c99a;
+      --blue:#a8dfbd; --yellow:#f2d477; --ink:#173b2a;
+      --muted:#617b6b; --bg:#f1f8f2; --white:#fff;
+      --line:#d8e9dc; --green:#239b70; --red:#d94d67;
     }
     * { box-sizing:border-box; }
     body {
       margin:0; min-height:100vh; color:var(--ink);
       font-family:Inter, ui-rounded, "Segoe UI", system-ui, sans-serif;
       background:
-        radial-gradient(circle at 8% 10%, #ffe0ef 0, transparent 25%),
-        radial-gradient(circle at 92% 12%, #dff5ff 0, transparent 25%),
+        radial-gradient(circle at 8% 10%, #d8f2df 0, transparent 25%),
+        radial-gradient(circle at 92% 12%, #e2f3e5 0, transparent 25%),
         var(--bg);
     }
     button,input { font:inherit; }
@@ -31,7 +31,7 @@
     .card {
       background:rgba(255,255,255,.94); border:1px solid var(--line);
       border-radius:24px; padding:clamp(18px,4vw,28px);
-      box-shadow:0 14px 40px rgba(73,48,130,.09); margin:16px 0;
+      box-shadow:0 14px 40px rgba(30,100,55,.10); margin:16px 0;
     }
     .hidden { display:none !important; }
     .actions { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
@@ -41,11 +41,11 @@
     }
     .btn:active { transform:scale(.98); }
     .btn:disabled { opacity:.45; cursor:not-allowed; }
-    .primary { background:var(--purple); color:white; box-shadow:0 6px 14px #7657e83b; }
+    .primary { background:var(--purple); color:white; box-shadow:0 6px 14px #16834b35; }
     .primary:hover { background:var(--purple-dark); }
     .pink { background:#ffe4ef; color:#a52e68; }
     .blue { background:#e1f5ff; color:#17658a; }
-    .soft { background:#f1edfb; color:var(--purple-dark); }
+    .soft { background:#e8f3ea; color:var(--purple-dark); }
     .danger { background:#fff0f1; color:var(--red); }
     .field { margin:15px 0; }
     label { display:block; font-size:13px; font-weight:800; margin:0 0 7px 2px; }
@@ -57,7 +57,7 @@
     .code-input { text-transform:uppercase; letter-spacing:5px; font-size:22px; font-weight:900; text-align:center; }
     .muted { color:var(--muted); }
     .small { font-size:13px; }
-    .notice { padding:12px 14px; border-radius:13px; background:#f3efff; color:#57449b; font-size:13px; line-height:1.45; }
+    .notice { padding:12px 14px; border-radius:13px; background:#eaf6ed; color:#245d39; font-size:13px; line-height:1.45; }
     .improvement-alert {
       background:#fff0b8 !important;
       color:#684400 !important;
@@ -76,7 +76,7 @@
     .success { background:#e9faf3; color:#176b4d; }
     .room-top { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
     .room-code {
-      background:#f3efff; color:var(--purple-dark); padding:10px 15px;
+      background:#e4f2e7; color:var(--purple-dark); padding:10px 15px;
       border-radius:12px; font-size:21px; font-weight:950; letter-spacing:4px;
       user-select:all;
     }
@@ -85,12 +85,12 @@
       border:2px solid var(--line); border-radius:18px; padding:16px 12px;
       text-align:center; min-width:0;
     }
-    .player.active { border-color:var(--purple); background:#f6f2ff; box-shadow:0 0 0 3px #7657e814; }
+    .player.active { border-color:var(--purple); background:#eff8f0; box-shadow:0 0 0 3px #16834b18; }
     .player.waiting { opacity:.68; }
     .avatar { font-size:30px; }
     .player-name { font-weight:900; margin:6px 0; }
     .tag { display:inline-block; border-radius:999px; padding:5px 9px; font-size:11px; font-weight:900; background:#f0edf5; color:var(--muted); }
-    .active .tag { background:#e6ddff; color:var(--purple-dark); }
+    .active .tag { background:#dcefe1; color:var(--purple-dark); }
     .round-box {
       text-align:center;
       background:transparent;
@@ -112,13 +112,32 @@
       margin:0;
       color:var(--ink);
     }
-    .progress { height:9px; border-radius:20px; background:#eeeaf6; overflow:hidden; margin:15px 0 7px; }
-    .progress > div { height:100%; background:linear-gradient(90deg,var(--pink),var(--yellow)); width:0%; transition:width .2s; }
+    .progress { height:9px; border-radius:20px; background:#e4eee6; overflow:hidden; margin:15px 0 7px; }
+    .progress > div { height:100%; background:linear-gradient(90deg,#39a96b,#a6d9a9); width:0%; transition:width .2s; }
     .full { width:100%; }
     .center { text-align:center; }
     .spinner { display:inline-block; width:15px; height:15px; border:2px solid #ffffff70; border-top-color:white; border-radius:50%; animation:spin .7s linear infinite; vertical-align:middle; }
     @keyframes spin { to { transform:rotate(360deg); } }
     footer { text-align:center; color:#938da4; font-size:12px; padding:12px; }
+    @media (orientation: portrait) and (max-width: 900px) {
+      #gamePanel .round-box {
+        display:block;
+        position:absolute;
+        top:8px;
+        right:10px;
+        z-index:5;
+        margin:0;
+        padding:6px 10px;
+        border-radius:12px;
+        background:#e2f2e6;
+        border:1px solid #b9ddc2;
+        box-shadow:0 3px 10px rgba(22,131,75,.12);
+      }
+      #gamePanel .round-number {
+        color:#10663a;
+        font-size:16px;
+      }
+    }
     @media(max-width:520px) {
       .wrap { width:min(100% - 20px,760px); padding-top:18px; }
       .actions { grid-template-columns:1fr; }
@@ -133,7 +152,7 @@
       body.landscape-game {
         min-height: 100dvh;
         overflow: hidden;
-        background: #f7f4ff;
+        background: #f1f8f2;
       }
       body.landscape-game header,
       body.landscape-game footer,
@@ -261,12 +280,12 @@
 
       <div class="players">
         <div id="player1Card" class="player">
-          <div class="avatar">🟣</div>
+          <div class="avatar">🟢</div>
           <div class="player-name" id="player1Name">Joueur 1</div>
           <span id="player1Tag" class="tag">En attente</span>
         </div>
         <div id="player2Card" class="player">
-          <div class="avatar">🔵</div>
+          <div class="avatar">🟩</div>
           <div class="player-name" id="player2Name">Joueur 2</div>
           <span id="player2Tag" class="tag">En attente</span>
         </div>
@@ -287,7 +306,7 @@
         <div class="notice center" id="opponentAction" aria-live="polite">Dernière action de l'adversaire : aucune pour le moment.</div>
         <div class="progress"><div id="progressBar"></div></div>
         <div class="actions" style="grid-template-columns:1fr 1fr 1fr;gap:8px">
-          <button id="acceptBtn" class="btn" aria-label="Accepter" title="Accepter" style="background:#ddf5e8;color:#16834b">✓</button>
+          <button id="acceptBtn" class="btn" aria-label="Accepter" title="Accepter" style="background:#d9f1e0;color:#10663a">✓</button>
           <button id="improveBtn" class="btn" style="background:#fff0cc;color:#946000">＋</button>
           <button id="rejectBtn" class="btn danger">✕</button>
         </div>
