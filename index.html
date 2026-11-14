@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#7657e8">
+  <title>Fidget Toy Trading</title>
+  <style>
+    :root {
+      --purple:#7657e8; --purple-dark:#5c3ecb; --pink:#ff75ad;
+      --blue:#69c8f2; --yellow:#ffd66e; --ink:#292342;
+      --muted:#77718c; --bg:#f7f4ff; --white:#fff;
+      --line:#e9e3f6; --green:#239b70; --red:#d94d67;
+    }
+    * { box-sizing:border-box; }
+    body {
+      margin:0; min-height:100vh; color:var(--ink);
+      font-family:Inter, ui-rounded, "Segoe UI", system-ui, sans-serif;
+      background:
+        radial-gradient(circle at 8% 10%, #ffe0ef 0, transparent 25%),
+        radial-gradient(circle at 92% 12%, #dff5ff 0, transparent 25%),
+        var(--bg);
+    }
+    button,input { font:inherit; }
+    .wrap { width:min(100% - 28px, 760px); margin:0 auto; padding:28px 0 48px; }
+    header { text-align:center; margin:8px 0 24px; }
+    .logo { font-size:42px; margin-bottom:4px; }
+    h1 { font-size:clamp(27px,6vw,42px); line-height:1.08; margin:0; letter-spacing:-1.5px; }
+    .brand { color:var(--purple); }
+    .subtitle { color:var(--muted); margin:10px 0 0; font-size:15px; }
+    .card {
+      background:rgba(255,255,255,.94); border:1px solid var(--line);
+      border-radius:24px; padding:clamp(18px,4vw,28px);
+      box-shadow:0 14px 40px rgba(73,48,130,.09); margin:16px 0;
+    }
+    .hidden { display:none !important; }
+    .actions { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    .btn {
+      border:0; border-radius:15px; padding:15px 18px; font-weight:800;
+      cursor:pointer; transition:transform .12s, filter .12s; min-height:52px;
+    }
+    .btn:active { transform:scale(.98); }
+    .btn:disabled { opacity:.45; cursor:not-allowed; }
+    .primary { background:var(--purple); color:white; box-shadow:0 6px 14px #7657e83b; }
+    .primary:hover { background:var(--purple-dark); }
+    .pink { background:#ffe4ef; color:#a52e68; }
+    .blue { background:#e1f5ff; color:#17658a; }
+    .soft { background:#f1edfb; color:var(--purple-dark); }
+    .danger { background:#fff0f1; color:var(--red); }
+    .field { margin:15px 0; }
+    label { display:block; font-size:13px; font-weight:800; margin:0 0 7px 2px; }
+    input {
+      width:100%; border:2px solid var(--line); border-radius:13px;
+      padding:14px 15px; outline:none; background:#fff; color:var(--ink);
+    }
+    input:focus { border-color:var(--purple); }
+    .code-input { text-transform:uppercase; letter-spacing:5px; font-size:22px; font-weight:900; text-align:center; }
+    .muted { color:var(--muted); }
+    .small { font-size:13px; }
+    .notice { padding:12px 14px; border-radius:13px; background:#f3efff; color:#57449b; font-size:13px; line-height:1.45; }
+    .error { background:#fff0f1; color:#a52e46; }
+    .success { background:#e9faf3; color:#176b4d; }
+    .room-top { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+    .room-code {
+      background:#f3efff; color:var(--purple-dark); padding:10px 15px;
+      border-radius:12px; font-size:21px; font-weight:950; letter-spacing:4px;
+      user-select:all;
+    }
+    .players { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:20px 0; }
+    .player {
+      border:2px solid var(--line); border-radius:18px; padding:16px 12px;
+      text-align:center; min-width:0;
+    }
+    .player.active { border-color:var(--purple); background:#f6f2ff; box-shadow:0 0 0 3px #7657e814; }
+    .player.waiting { opacity:.68; }
+    .avatar { font-size:30px; }
+    .player-name { font-weight:900; margin:6px 0; }
+    .tag { display:inline-block; border-radius:999px; padding:5px 9px; font-size:11px; font-weight:900; background:#f0edf5; color:var(--muted); }
+    .active .tag { background:#e6ddff; color:var(--purple-dark); }
+    .round-box {
+      text-align:center; background:linear-gradient(135deg,#7657e8,#9c78f1);
+      color:white; border-radius:20px; padding:22px 14px; margin:16px 0;
+    }
+    .round-box .round-label { font-size:12px; text-transform:uppercase; letter-spacing:2px; opacity:.85; font-weight:800; }
+    .round-number { font-size:48px; line-height:1.1; font-weight:950; margin:5px 0; }
+    .turn-message { font-size:18px; font-weight:900; margin:8px 0 0; }
+    .progress { height:9px; border-radius:20px; background:#eeeaf6; overflow:hidden; margin:15px 0 7px; }
+    .progress > div { height:100%; background:linear-gradient(90deg,var(--pink),var(--yellow)); width:0%; transition:width .2s; }
+    .full { width:100%; }
+    .center { text-align:center; }
+    .spinner { display:inline-block; width:15px; height:15px; border:2px solid #ffffff70; border-top-color:white; border-radius:50%; animation:spin .7s linear infinite; vertical-align:middle; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    footer { text-align:center; color:#938da4; font-size:12px; padding:12px; }
+    @media(max-width:520px) {
+      .wrap { width:min(100% - 20px,760px); padding-top:18px; }
+      .actions { grid-template-columns:1fr; }
+      .card { border-radius:20px; }
+      .players { gap:8px; }
+      .player { padding:13px 7px; }
+      .round-number { font-size:42px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <header>
+      <div class="logo">💜✨</div>
+      <h1><span class="brand">Fidget Toy</span> Trading</h1>
+      <p class="subtitle">Deux joueurs, deux téléphones, un trading synchronisé.</p>
+    </header>
+
+    <section id="home" class="card">
+      <h2>Bienvenue !</h2>
+      <p class="muted">Crée une partie ou rejoins un ami avec son code.</p>
+      <div class="actions">
+        <button id="createBtn" class="btn primary">＋ Créer une partie</button>
+        <button id="showJoinBtn" class="btn pink">↗ Rejoindre une partie</button>
+      </div>
+      <div id="joinPanel" class="hidden">
+        <div class="field">
+          <label for="roomCodeInput">Code de la partie</label>
+          <input id="roomCodeInput" class="code-input" maxlength="6" placeholder="ABC123" autocomplete="off">
+        </div>
+        <button id="joinBtn" class="btn primary full">Rejoindre</button>
+      </div>
+      <p id="homeStatus" class="notice hidden" role="status"></p>
+    </section>
+
+    <section id="room" class="card hidden">
+      <div class="room-top">
+        <div>
+          <div class="small muted">CODE DE LA PARTIE</div>
+          <div id="roomCodeDisplay" class="room-code">------</div>
+        </div>
+        <button id="copyCodeBtn" class="btn soft">Copier le code</button>
+      </div>
+
+      <div class="players">
+        <div id="player1Card" class="player">
+          <div class="avatar">🟣</div>
+          <div class="player-name" id="player1Name">Joueur 1</div>
+          <span id="player1Tag" class="tag">En attente</span>
+        </div>
+        <div id="player2Card" class="player">
+          <div class="avatar">🔵</div>
+          <div class="player-name" id="player2Name">Joueur 2</div>
+          <span id="player2Tag" class="tag">En attente</span>
+        </div>
+      </div>
+
+      <div id="waitingPanel" class="notice center">
+        En attente du deuxième joueur… Envoie-lui le code de la partie !
+      </div>
+
+      <div id="gamePanel" class="hidden">
+        <div class="round-box">
+          <div class="round-label">Round en cours</div>
+          <div class="round-number" id="roundNumber">1</div>
+          <div id="starterText" class="small">Le joueur 1 commence ce round</div>
+          <div id="turnMessage" class="turn-message">À toi de jouer !</div>
+        </div>
+        <div class="small muted center" id="turnOrderText">Ordre du round : Joueur 1 → Joueur 2</div>
+        <div class="progress"><div id="progressBar"></div></div>
+        <p id="progressText" class="small muted center">0 / 2 tours terminés</p>
+        <button id="finishTurnBtn" class="btn primary full">Terminer mon tour ✓</button>
+        <p id="gameStatus" class="notice hidden" role="status"></p>
+      </div>
+
+      <div class="field">
+        <button id="leaveBtn" class="btn danger full">Quitter cette partie</button>
+      </div>
+    </section>
+    <footer>Fidget Toy Trading · Les tours changent automatiquement à chaque round.</footer>
+  </main>
+
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+  <script>
+    // Configuration Firebase de ton projet
+    const firebaseConfig = {
+      apiKey: "AIzaSyCJ5KIT7tksDslA792P2IlCNA5PpIAhaGo",
+      authDomain: "fidget-toy-trading.firebaseapp.com",
+      databaseURL: "https://fidget-toy-trading-default-rtdb.firebaseio.com",
+      projectId: "fidget-toy-trading",
+      storageBucket: "fidget-toy-trading.firebasestorage.app",
+      messagingSenderId: "1096835177527",
+      appId: "1:1096835177527:web:37b1cdc4aa2ff2cd07b3b2"
+    };
+
+    const app = firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
+
+    const $ = id => document.getElementById(id);
+    let currentRoomCode = null;
+    let myPlayerNumber = null;
+    let roomListener = null;
+    let roomRef = null;
+    let currentRoomData = null;
+    let busy = false;
+
+    function showStatus(id, message, type = "") {
+      const el = $(id);
+      el.textContent = message;
+      el.className = "notice " + type;
+      el.classList.remove("hidden");
+    }
+    function hideStatus(id) { $(id).classList.add("hidden"); }
+    function setBusy(value) {
+      busy = value;
+      $("createBtn").disabled = value;
+      $("joinBtn").disabled = value;
+      $("finishTurnBtn").disabled = value;
+    }
+    function makeCode() {
+      const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+      let result = "";
+      for (let i = 0; i < 6; i++) result += chars[Math.floor(Math.random() * chars.length)];
+      return result;
+    }
+    async function ensureAuth() {
+      if (auth.currentUser) return auth.currentUser;
+      const result = await auth.signInAnonymously();
+      return result.user;
+    }
+
+    async function createRoom() {
+      if (busy) return;
+      setBusy(true);
+      hideStatus("homeStatus");
+      try {
+        const user = await ensureAuth();
+        let code, ref, created = false;
+        for (let attempt = 0; attempt < 8 && !created; attempt++) {
+          code = makeCode();
+          ref = db.ref("rooms/" + code);
+          const result = await ref.transaction(existing => {
+            if (existing === null) {
+              return {
+                createdAt: firebase.database.ServerValue.TIMESTAMP,
+                status: "waiting",
+                player1: user.uid,
+                player2: null,
+                round: 1,
+                starter: 1,
+                currentPlayer: 1,
+                moved1: false,
+                moved2: false
+              };
+            }
+            return;
+          }, undefined, false);
+          created = result.committed;
+        }
+        if (!created) throw new Error("Impossible de créer un code. Réessaie.");
+        myPlayerNumber = 1;
+        await enterRoom(code, ref);
+      } catch (error) {
+        showStatus("homeStatus", friendlyError(error), "error");
+      } finally { setBusy(false); }
+    }
+
+    async function joinRoom() {
+      if (busy) return;
+      const code = $("roomCodeInput").value.trim().toUpperCase();
+      if (!/^[A-HJ-NP-Z2-9]{6}$/.test(code)) {
+        showStatus("homeStatus", "Entre un code valide de 6 caractères.", "error");
+        return;
+      }
+      setBusy(true);
+      hideStatus("homeStatus");
+      try {
+        const user = await ensureAuth();
+        const ref = db.ref("rooms/" + code);
+        const result = await ref.transaction(room => {
+          if (!room || room.player2 || room.player1 === user.uid) return;
+          room.player2 = user.uid;
+          room.status = "playing";
+          return room;
+        }, undefined, false);
+        if (!result.committed) {
+          const snap = await ref.once("value");
+          const data = snap.val();
+          if (data && data.player1 === user.uid && !data.player2) {
+            myPlayerNumber = 1;
+            await enterRoom(code, ref);
+            return;
+          }
+          throw new Error(data ? "Cette partie est déjà pleine." : "Code introuvable. Vérifie le code.");
+        }
+        myPlayerNumber = 2;
+        await enterRoom(code, ref);
+      } catch (error) {
+        showStatus("homeStatus", friendlyError(error), "error");
+      } finally { setBusy(false); }
+    }
+
+    async function enterRoom(code, ref) {
+      currentRoomCode = code;
+      roomRef = ref;
+      $("home").classList.add("hidden");
+      $("room").classList.remove("hidden");
+      $("roomCodeDisplay").textContent = code;
+      if (roomListener && roomRef) roomRef.off("value", roomListener);
+      roomListener = snapshot => {
+        currentRoomData = snapshot.val();
+        if (!currentRoomData) {
+          showStatus("gameStatus", "Cette partie n'existe plus.", "error");
+          return;
+        }
+        renderRoom(currentRoomData);
+      };
+      ref.on("value", roomListener, error => showStatus("gameStatus", friendlyError(error), "error"));
+      try {
+        await navigator.clipboard?.writeText(code);
+      } catch (_) {}
+    }
+
+    function renderRoom(room) {
+      const p2Joined = !!room.player2;
+      $("player1Tag").textContent = room.currentPlayer === 1 && p2Joined ? "À son tour" : "Connecté";
+      $("player2Tag").textContent = !p2Joined ? "En attente" : (room.currentPlayer === 2 ? "À son tour" : "Connecté");
+      $("player1Card").classList.toggle("active", p2Joined && room.currentPlayer === 1);
+      $("player2Card").classList.toggle("active", p2Joined && room.currentPlayer === 2);
+      $("player2Card").classList.toggle("waiting", !p2Joined);
+      $("waitingPanel").classList.toggle("hidden", p2Joined);
+      $("gamePanel").classList.toggle("hidden", !p2Joined);
+      if (!p2Joined) return;
+
+      $("roundNumber").textContent = room.round || 1;
+      $("starterText").textContent = `Le joueur ${room.starter} commence ce round`;
+      $("turnOrderText").textContent = `Ordre du round : Joueur ${room.starter} → Joueur ${3 - room.starter}`;
+      const mine = room.currentPlayer === myPlayerNumber;
+      $("turnMessage").textContent = mine ? "À toi de jouer !" : `Au joueur ${room.currentPlayer} de jouer…`;
+      $("finishTurnBtn").disabled = !mine || busy;
+      $("finishTurnBtn").textContent = mine ? "Terminer mon tour ✓" : "En attente de l'adversaire…";
+      const done = Number(!!room.moved1) + Number(!!room.moved2);
+      $("progressBar").style.width = (done * 50) + "%";
+      $("progressText").textContent = `${done} / 2 tours terminés`;
+    }
+
+    async function finishTurn() {
+      if (busy || !roomRef || !currentRoomData) return;
+      setBusy(true);
+      hideStatus("gameStatus");
+      try {
+        const result = await roomRef.transaction(room => {
+          if (!room || room.status !== "playing" || room.currentPlayer !== myPlayerNumber) return;
+          const mineKey = myPlayerNumber === 1 ? "moved1" : "moved2";
+          const otherKey = myPlayerNumber === 1 ? "moved2" : "moved1";
+          room[mineKey] = true;
+          if (room[otherKey]) {
+            room.round = (room.round || 1) + 1;
+            room.starter = room.starter === 1 ? 2 : 1;
+            room.currentPlayer = room.starter;
+            room.moved1 = false;
+            room.moved2 = false;
+          } else {
+            room.currentPlayer = 3 - myPlayerNumber;
+          }
+          return room;
+        }, undefined, false);
+        if (!result.committed) showStatus("gameStatus", "Ce n'est pas ton tour, ou le tour a déjà été terminé.", "error");
+      } catch (error) {
+        showStatus("gameStatus", friendlyError(error), "error");
+      } finally { setBusy(false); if (currentRoomData) renderRoom(currentRoomData); }
+    }
+
+    function leaveRoom() {
+      if (roomRef && roomListener) roomRef.off("value", roomListener);
+      currentRoomCode = null; myPlayerNumber = null; roomListener = null; roomRef = null; currentRoomData = null;
+      $("room").classList.add("hidden");
+      $("home").classList.remove("hidden");
+      $("joinPanel").classList.add("hidden");
+      $("roomCodeInput").value = "";
+      hideStatus("homeStatus");
+    }
+    function friendlyError(error) {
+      const message = error && error.message ? error.message : String(error);
+      if (/permission_denied|permission/i.test(message)) return "Accès refusé par Firebase. Vérifie les règles de Realtime Database.";
+      if (/network|offline/i.test(message)) return "Connexion Internet impossible. Vérifie ton réseau et réessaie.";
+      if (/api-key-not-valid/i.test(message)) return "La configuration Firebase semble incorrecte. Vérifie les paramètres de l'application Web.";
+      return message;
+    }
+
+    $("createBtn").addEventListener("click", createRoom);
+    $("showJoinBtn").addEventListener("click", () => {
+      $("joinPanel").classList.toggle("hidden");
+      $("roomCodeInput").focus();
+    });
+    $("joinBtn").addEventListener("click", joinRoom);
+    $("roomCodeInput").addEventListener("input", e => e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,6));
+    $("roomCodeInput").addEventListener("keydown", e => { if (e.key === "Enter") joinRoom(); });
+    $("finishTurnBtn").addEventListener("click", finishTurn);
+    $("leaveBtn").addEventListener("click", leaveRoom);
+    $("copyCodeBtn").addEventListener("click", async () => {
+      try { await navigator.clipboard.writeText(currentRoomCode); showStatus("gameStatus", "Code copié ! Envoie-le à ton adversaire.", "success"); }
+      catch (_) { showStatus("gameStatus", "Ton code est : " + currentRoomCode, "success"); }
+    });
+
+    auth.onAuthStateChanged(user => {
+      if (!user) return;
+      // La connexion anonyme est prête; le joueur crée ou rejoint une partie.
+    });
+  </script>
+</body>
+</html>
