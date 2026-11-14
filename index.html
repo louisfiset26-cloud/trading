@@ -92,12 +92,26 @@
     .tag { display:inline-block; border-radius:999px; padding:5px 9px; font-size:11px; font-weight:900; background:#f0edf5; color:var(--muted); }
     .active .tag { background:#e6ddff; color:var(--purple-dark); }
     .round-box {
-      text-align:center; background:linear-gradient(135deg,#7657e8,#9c78f1);
-      color:white; border-radius:20px; padding:22px 14px; margin:16px 0;
+      text-align:center;
+      background:transparent;
+      color:var(--ink);
+      border:0;
+      box-shadow:none;
+      border-radius:0;
+      padding:2px 0;
+      margin:5px 0 12px;
     }
-    .round-box .round-label { font-size:12px; text-transform:uppercase; letter-spacing:2px; opacity:.85; font-weight:800; }
-    .round-number { font-size:48px; line-height:1.1; font-weight:950; margin:5px 0; }
-    .turn-message { font-size:18px; font-weight:900; margin:8px 0 0; }
+    .round-box .round-label,
+    .round-box #starterText,
+    .round-box .turn-message { display:none !important; }
+    .round-number {
+      display:inline-block;
+      font-size:25px;
+      line-height:1.1;
+      font-weight:950;
+      margin:0;
+      color:var(--ink);
+    }
     .progress { height:9px; border-radius:20px; background:#eeeaf6; overflow:hidden; margin:15px 0 7px; }
     .progress > div { height:100%; background:linear-gradient(90deg,var(--pink),var(--yellow)); width:0%; transition:width .2s; }
     .full { width:100%; }
@@ -163,8 +177,20 @@
         justify-content: center;
         gap: 8px;
       }
-      body.landscape-game #gamePanel > *:not(.actions):not(#offerStatus):not(#opponentAction) {
+      body.landscape-game #gamePanel > *:not(.actions):not(#offerStatus):not(#opponentAction):not(.round-box) {
         display: none !important;
+      }
+      body.landscape-game #gamePanel .round-box {
+        display:block !important;
+        flex:0 0 auto;
+        margin:0;
+        padding:0 0 2px;
+        background:transparent !important;
+        color:var(--ink) !important;
+        box-shadow:none !important;
+      }
+      body.landscape-game #gamePanel .round-number {
+        font-size:clamp(18px, 3.2vh, 27px);
       }
       body.landscape-game #gamePanel #offerStatus,
       body.landscape-game #gamePanel #opponentAction {
@@ -531,7 +557,8 @@ async function joinRoom() {
         $("offerStatus").textContent = "Les deux joueurs peuvent répondre à l'offre.";
       }
 
-      const canAct = !myAccepted && requestBy !== myPlayerNumber && !busy;
+      // Les joueurs peuvent changer d'avis à tout moment pendant le round.
+      const canAct = !busy;
       $("acceptBtn").disabled = !canAct;
       $("improveBtn").disabled = !canAct;
       $("rejectBtn").disabled = !canAct;
@@ -556,15 +583,14 @@ async function joinRoom() {
           const mineKey = myPlayerNumber === 1 ? "accepted1" : "accepted2";
           const otherKey = myPlayerNumber === 1 ? "accepted2" : "accepted1";
 
-          // Une décision déjà prise ne peut pas être modifiée pendant le round.
-          if (room[mineKey] || room.improveRequestedBy === myPlayerNumber) return;
-
+          // Chaque joueur peut remplacer sa décision tant que le round est actif.
           room.lastActionBy = myPlayerNumber;
           room.lastAction = action;
 
           if (action === "accept") {
-            room.improveRequestedBy = null;
             room[mineKey] = true;
+            // Accepter annule une demande d'amélioration en cours.
+            room.improveRequestedBy = null;
 
             // Le round se termine uniquement lorsque les deux ont accepté.
             if (room[otherKey]) {
@@ -573,10 +599,13 @@ async function joinRoom() {
               room.accepted2 = false;
               room.improveRequestedBy = null;
               room.lastResult = "accepted";
+            } else {
+              room.lastResult = null;
             }
           } else if (action === "improve") {
-            // Une demande de meilleure offre annule l'acceptation déjà donnée
-            // par l'autre joueur : il doit pouvoir répondre à la nouvelle offre.
+            // Demander plus remplace sa propre acceptation et annule celle
+            // de l'autre joueur pour lui permettre de répondre à la nouvelle offre.
+            room[mineKey] = false;
             room[otherKey] = false;
             room.improveRequestedBy = myPlayerNumber;
             room.lastResult = null;
