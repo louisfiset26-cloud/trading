@@ -261,40 +261,64 @@
       } finally { setBusy(false); }
     }
 
-    async function joinRoom() {
-      if (busy) return;
-      const code = $("roomCodeInput").value.trim().toUpperCase();
-      if (!/^[A-HJ-NP-Z2-9]{6}$/.test(code)) {
-        showStatus("homeStatus", "Entre un code valide de 6 caractères.", "error");
-        return;
-      }
-      setBusy(true);
-      hideStatus("homeStatus");
-      try {
-        const user = await ensureAuth();
-        const ref = db.ref("rooms/" + code);
-        const result = await ref.transaction(room => {
-          if (!room || room.player2 || room.player1 === user.uid) return;
-          room.player2 = user.uid;
-          room.status = "playing";
-          return room;
-        }, undefined, false);
-        if (!result.committed) {
-          const snap = await ref.once("value");
-          const data = snap.val();
-          if (data && data.player1 === user.uid && !data.player2) {
-            myPlayerNumber = 1;
-            await enterRoom(code, ref);
-            return;
-          }
-          throw new Error(data ? "Cette partie est déjà pleine." : "Code introuvable. Vérifie le code.");
-        }
-        myPlayerNumber = 2;
-        await enterRoom(code, ref);
-      } catch (error) {
-        showStatus("homeStatus", friendlyError(error), "error");
-      } finally { setBusy(false); }
+
+async function joinRoom() {
+  if (busy) return;
+
+  const code = $("roomCodeInput").value.trim().toUpperCase();
+
+  if (!/^[A-HJ-NP-Z2-9]{6}$/.test(code)) {
+    showStatus("homeStatus", "Entre un code valide de 6 caractères.", "error");
+    return;
+  }
+
+  setBusy(true);
+  hideStatus("homeStatus");
+
+  try {
+    const user = await ensureAuth();
+    const ref = db.ref("rooms/" + code);
+
+    const result = await ref.transaction(room => {
+      if (!room) return;
+
+      // Le joueur 1 retrouve sa partie
+      if (room.player1 === user.uid) return room;
+
+      // Le joueur 2 retrouve sa place
+      if (room.player2 === user.uid) return room;
+
+      // Une autre personne a déjà rejoint
+      if (room.player2) return;
+
+      room.player2 = user.uid;
+      room.status = "playing";
+      return room;
+    }, undefined, false);
+
+    if (!result.committed) {
+      throw new Error("Partie introuvable ou déjà pleine.");
     }
+
+    const room = result.snapshot.val();
+
+    if (room.player1 === user.uid) {
+      myPlayerNumber = 1;
+    } else if (room.player2 === user.uid) {
+      myPlayerNumber = 2;
+    } else {
+      throw new Error("Impossible de déterminer ton joueur.");
+    }
+
+    await enterRoom(code, ref);
+
+  } catch (error) {
+    showStatus("homeStatus", friendlyError(error), "error");
+  } finally {
+    setBusy(false);
+  }
+}
+
 
     async function enterRoom(code, ref) {
       currentRoomCode = code;
