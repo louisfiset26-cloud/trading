@@ -64,26 +64,6 @@
     body[data-theme="christmas"] #acceptBtn { background:#dff0e1 !important; color:#176b37 !important; }
     body[data-theme="halloween"] #improveBtn { background:#4a2b16 !important; color:#ffc04d !important; }
     body[data-theme="christmas"] #improveBtn { background:#f8e7d5 !important; color:#9a4b13 !important; }
-    .sound-settings {
-      margin-top:22px; padding:16px; border:1px solid var(--line);
-      border-radius:16px; background:var(--surface-tint);
-    }
-    .sound-settings h3 { margin:0 0 14px; color:var(--purple-dark); }
-    .sound-toggle {
-      display:flex; align-items:center; gap:10px; cursor:pointer;
-      font-size:15px; margin:0 0 16px;
-    }
-    .sound-toggle input {
-      width:22px; height:22px; margin:0; accent-color:var(--purple);
-      flex:0 0 auto;
-    }
-    #soundVolume {
-      padding:0; border:0; accent-color:var(--purple);
-      cursor:pointer; background:transparent;
-    }
-    .sound-settings .field { margin-bottom:6px; }
-    body[data-theme="halloween"] .sound-settings { background:#302116; }
-    body[data-theme="halloween"] .sound-settings h3 { color:#ffb15c; }
     * { box-sizing:border-box; }
     body {
       margin:0; min-height:100vh; color:var(--ink);
@@ -121,6 +101,15 @@
     .danger { background:#fff0f1; color:var(--red); }
     .field { margin:15px 0; }
     .settings-open { margin-top:14px; min-height:42px; padding:10px 18px; }
+    .sound-setting { display:flex; align-items:center; gap:12px; margin:12px 0; }
+    .sound-setting input[type="checkbox"] { width:22px; height:22px; flex:0 0 auto; }
+    .sound-setting input[type="range"] { padding:0; accent-color:var(--purple); }
+    .friend-code { font-size:25px; font-weight:950; letter-spacing:5px; text-align:center; padding:14px; border-radius:14px; background:var(--surface-tint); color:var(--purple-dark); user-select:all; }
+    .friend-list { display:grid; gap:8px; margin:12px 0; }
+    .friend-item { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:11px 13px; border:1px solid var(--line); border-radius:13px; background:var(--surface-tint); }
+    .friend-item strong { overflow-wrap:anywhere; }
+    .friend-join-panel { margin-top:16px; padding-top:14px; border-top:1px solid var(--line); }
+    .add-friend-match { display:none; }
     .theme-select {
       width:100%; border:2px solid var(--line); border-radius:13px;
       padding:14px 15px; background:#fff; color:var(--ink); font:inherit;
@@ -380,19 +369,28 @@
           <span class="muted small">Choisis ta couleur préférée.</span>
         </div>
       </div>
-      <div class="field sound-settings">
-        <h3>🔊 Sons</h3>
-        <label class="sound-toggle" for="soundEnabled">
-          <input id="soundEnabled" type="checkbox" checked>
-          Activer les sons
-        </label>
-        <div class="field">
-          <label for="soundVolume">Volume : <span id="soundVolumeValue">70 %</span></label>
-          <input id="soundVolume" type="range" min="0" max="100" value="70" step="1">
-        </div>
-        <p class="muted small">Ces réglages s'appliquent à tous les sons et sont enregistrés sur cet appareil.</p>
-      </div>
       <div class="notice">Ton choix s'applique immédiatement et reste enregistré même après avoir fermé le site.</div>
+
+      <div class="field">
+        <h3>🔊 Sons</h3>
+        <label class="sound-setting"><input id="soundEnabled" type="checkbox" checked> Activer les sons</label>
+        <label for="soundVolume">Volume : <strong id="soundVolumeLabel">100 %</strong></label>
+        <input id="soundVolume" type="range" min="0" max="100" step="1" value="100">
+        <p class="small muted">Ces réglages sont enregistrés sur cet appareil.</p>
+      </div>
+
+      <div class="field">
+        <h3>👥 Mes amis</h3>
+        <p class="small muted">Ton code personnel permet à tes amis de t'ajouter.</p>
+        <div id="myFriendCode" class="friend-code">------</div>
+        <button id="copyFriendCodeBtn" class="btn soft full" style="margin-top:8px">Copier mon code</button>
+        <label for="friendCodeInput" style="margin-top:18px">Ajouter un ami avec son code</label>
+        <input id="friendCodeInput" class="code-input" maxlength="6" placeholder="ABC123" autocomplete="off">
+        <button id="addFriendByCodeBtn" class="btn primary full" style="margin-top:9px">＋ Ajouter cet ami</button>
+        <p id="friendSettingsStatus" class="notice hidden" role="status"></p>
+        <h4>Ma liste d'amis</h4>
+        <div id="settingsFriendList" class="friend-list"><p class="small muted">Chargement...</p></div>
+      </div>
     </section>
 
     <section id="home" class="card">
@@ -401,6 +399,18 @@
       <div class="actions">
         <button id="createBtn" class="btn primary">＋ Créer une partie</button>
         <button id="showJoinBtn" class="btn pink">↗ Rejoindre une partie</button>
+      </div>
+      <div class="field">
+        <button id="showFriendsBtn" class="btn soft full">👥 Rejoindre un ami</button>
+      </div>
+      <div id="friendJoinPanel" class="friend-join-panel hidden">
+        <label for="friendToJoinSelect">Choisir un ami</label>
+        <select id="friendToJoinSelect" class="theme-select">
+          <option value="">Chargement de tes amis...</option>
+        </select>
+        <button id="joinFriendBtn" class="btn primary full" style="margin-top:9px">Rejoindre cet ami</button>
+        <button id="refreshFriendsBtn" class="btn soft full" style="margin-top:8px">↻ Actualiser la liste</button>
+        <p id="friendJoinStatus" class="notice hidden" role="status"></p>
       </div>
       <div id="joinPanel" class="hidden">
         <div class="field">
@@ -457,6 +467,9 @@
         <p id="gameStatus" class="notice hidden" role="status"></p>
       </div>
 
+      <button id="addOpponentFriendBtn" class="btn soft full add-friend-match" style="margin-top:10px">👥 Ajouter cet adversaire comme ami</button>
+      <p id="matchFriendStatus" class="notice hidden" role="status"></p>
+
       <div class="field">
         <button id="leaveBtn" class="btn danger full">Quitter cette partie</button>
       </div>
@@ -486,16 +499,9 @@
     const $ = id => document.getElementById(id);
     let savedTheme = "normal";
     let savedThemeColor = "#16834b";
-    let soundEnabled = true;
-    let soundVolume = 70;
     try {
       savedTheme = localStorage.getItem("fidgetTradingTheme") || "normal";
       savedThemeColor = localStorage.getItem("fidgetTradingColor") || "#16834b";
-      soundEnabled = localStorage.getItem("fidgetTradingSoundEnabled") !== "false";
-      const storedVolume = localStorage.getItem("fidgetTradingSoundVolume");
-      if (storedVolume !== null && Number.isFinite(Number(storedVolume))) {
-        soundVolume = Math.max(0, Math.min(100, Number(storedVolume)));
-      }
     } catch (_) {}
     function updateOrientationMode() {
       document.body.classList.toggle(
@@ -564,6 +570,23 @@
 
     // Sons générés par le navigateur (aucun fichier externe requis).
     let soundContext = null;
+    let soundEnabled = true;
+    let soundVolume = 100;
+    try {
+      soundEnabled = localStorage.getItem("fidgetTradingSoundEnabled") !== "false";
+      const storedVolume = localStorage.getItem("fidgetTradingSoundVolume");
+      if (storedVolume !== null) soundVolume = Math.max(0, Math.min(100, Number(storedVolume) || 0));
+    } catch (_) {}
+    function updateSoundSettings() {
+      $("soundEnabled").checked = soundEnabled;
+      $("soundVolume").value = soundVolume;
+      $("soundVolumeLabel").textContent = soundVolume + " %";
+      $("soundVolume").disabled = !soundEnabled;
+      try {
+        localStorage.setItem("fidgetTradingSoundEnabled", String(soundEnabled));
+        localStorage.setItem("fidgetTradingSoundVolume", String(soundVolume));
+      } catch (_) {}
+    }
     function playTone(frequency, duration, wave = "sine", volume = 0.16, delay = 0, endFrequency = null) {
       if (!soundEnabled || soundVolume <= 0) return;
       volume *= soundVolume / 100;
@@ -597,6 +620,13 @@
       } else if (name === "improve") {
         playTone(520, 0.11, "triangle", 0.14);
         playTone(390, 0.16, "triangle", 0.14, 0.12);
+      } else if (name === "opponentImprove") {
+        // Signal distinctif joué uniquement chez l'adversaire lorsqu'il reçoit un +.
+        playTone(880, 0.13, "square", 0.10);
+        playTone(1175, 0.18, "sine", 0.14, 0.14);
+      } else if (name === "rejectArmed") {
+        // Petit son discret au premier appui sur Refuser.
+        playTone(440, 0.10, "sine", 0.12);
       } else if (name === "reject") {
         // Son de refus plus long, grave et descendant.
         playTone(330, 0.55, "sawtooth", 0.11, 0, 125);
@@ -668,6 +698,7 @@
     }
 
     let previousResultEventKey = null;
+    let previousOpponentActionEventKey = null;
 
     let currentRoomCode = null;
     let myPlayerNumber = null;
@@ -704,6 +735,166 @@
       if (auth.currentUser) return auth.currentUser;
       const result = await auth.signInAnonymously();
       return result.user;
+    }
+
+    // Système d'amis synchronisé avec Firebase.
+    function makeFriendCode() {
+      const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+      let code = "";
+      for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+      return code;
+    }
+
+    async function ensureFriendCode() {
+      const user = await ensureAuth();
+      const profileRef = db.ref("users/" + user.uid + "/friendCode");
+      const existing = await profileRef.once("value");
+      if (existing.exists() && existing.val()) return String(existing.val());
+
+      for (let attempt = 0; attempt < 12; attempt++) {
+        const code = makeFriendCode();
+        const reservation = await db.ref("friendCodes/" + code).transaction(current => {
+          if (current === null || current === user.uid) return user.uid;
+          return;
+        }, undefined, false);
+        if (reservation.committed) {
+          await profileRef.set(code);
+          return code;
+        }
+      }
+      throw new Error("Impossible de créer ton code d'ami. Réessaie.");
+    }
+
+    async function addFriendByUid(friendUid, knownCode = "") {
+      const user = await ensureAuth();
+      if (!friendUid) throw new Error("Cet ami est introuvable.");
+      if (friendUid === user.uid) throw new Error("Tu ne peux pas t'ajouter toi-même.");
+      const friendCode = knownCode || "AMI";
+      const now = firebase.database.ServerValue.TIMESTAMP;
+      const updates = {};
+      updates["friendships/" + user.uid + "/" + friendUid] = { code: friendCode, addedAt: now };
+      updates["friendships/" + friendUid + "/" + user.uid] = { code: await ensureFriendCode(), addedAt: now };
+      await db.ref().update(updates);
+      await refreshFriendLists();
+      return friendCode;
+    }
+
+    async function addFriendByCode() {
+      const code = $("friendCodeInput").value.trim().toUpperCase();
+      if (!/^[A-HJ-NP-Z2-9]{6}$/.test(code)) {
+        showStatus("friendSettingsStatus", "Entre un code valide de 6 caractères.", "error");
+        return;
+      }
+      $("addFriendByCodeBtn").disabled = true;
+      try {
+        const user = await ensureAuth();
+        const lookup = await db.ref("friendCodes/" + code).once("value");
+        if (!lookup.exists()) throw new Error("Ce code d'ami est introuvable.");
+        const friendUid = lookup.val();
+        if (friendUid === user.uid) throw new Error("C'est ton propre code !");
+        const already = await db.ref("friendships/" + user.uid + "/" + friendUid).once("value");
+        if (already.exists()) {
+          showStatus("friendSettingsStatus", "Cette personne est déjà dans ta liste d'amis.", "success");
+        } else {
+          await addFriendByUid(friendUid, code);
+          $("friendCodeInput").value = "";
+          showStatus("friendSettingsStatus", "Vous êtes maintenant amis ! 🎉", "success");
+        }
+      } catch (error) {
+        showStatus("friendSettingsStatus", friendlyError(error), "error");
+      } finally {
+        $("addFriendByCodeBtn").disabled = false;
+      }
+    }
+
+    async function refreshFriendLists() {
+      const user = await ensureAuth();
+      const [friendsSnap, code] = await Promise.all([
+        db.ref("friendships/" + user.uid).once("value"),
+        ensureFriendCode()
+      ]);
+      $("myFriendCode").textContent = code;
+      const friends = friendsSnap.val() || {};
+      const entries = Object.entries(friends);
+      const settingsList = $("settingsFriendList");
+      settingsList.innerHTML = "";
+      if (!entries.length) {
+        settingsList.innerHTML = `<p class="small muted">Tu n'as pas encore d'ami. Ajoute quelqu'un avec son code !</p>`;
+      } else {
+        entries.forEach(([uid, info]) => {
+          const item = document.createElement("div");
+          item.className = "friend-item";
+          const label = document.createElement("strong");
+          label.textContent = "Ami · " + ((info && info.code) || "Code inconnu");
+          const state = document.createElement("span");
+          state.className = "small muted";
+          state.textContent = "Ajouté";
+          item.append(label, state);
+          settingsList.appendChild(item);
+        });
+      }
+
+      const select = $("friendToJoinSelect");
+      const previous = select.value;
+      select.innerHTML = "";
+      if (!entries.length) {
+        const option = document.createElement("option");
+        option.value = "";
+        option.textContent = "Aucun ami pour le moment";
+        select.appendChild(option);
+      } else {
+        const placeholder = document.createElement("option");
+        placeholder.value = "";
+        placeholder.textContent = "Sélectionne un ami...";
+        select.appendChild(placeholder);
+        entries.forEach(([uid, info]) => {
+          const option = document.createElement("option");
+          option.value = uid;
+          option.textContent = "Ami · " + ((info && info.code) || "Code inconnu");
+          select.appendChild(option);
+        });
+        if (entries.some(([uid]) => uid === previous)) select.value = previous;
+      }
+      $("joinFriendBtn").disabled = !entries.length;
+    }
+
+    async function joinSelectedFriend() {
+      const friendUid = $("friendToJoinSelect").value;
+      if (!friendUid) {
+        showStatus("friendJoinStatus", "Choisis d'abord un ami.", "error");
+        return;
+      }
+      $("joinFriendBtn").disabled = true;
+      try {
+        const activeRoom = await db.ref("userPresence/" + friendUid + "/activeRoom").once("value");
+        const code = activeRoom.val();
+        if (!code) throw new Error("Cet ami n'a pas de partie ouverte pour le moment.");
+        $("roomCodeInput").value = String(code).toUpperCase();
+        await joinRoom();
+      } catch (error) {
+        showStatus("friendJoinStatus", friendlyError(error), "error");
+      } finally {
+        $("joinFriendBtn").disabled = false;
+      }
+    }
+
+    async function addCurrentOpponentAsFriend() {
+      if (!currentRoomData || !myPlayerNumber) return;
+      const opponentUid = myPlayerNumber === 1 ? currentRoomData.player2 : currentRoomData.player1;
+      if (!opponentUid) {
+        showStatus("matchFriendStatus", "Ton adversaire n'est pas encore connecté.", "error");
+        return;
+      }
+      $("addOpponentFriendBtn").disabled = true;
+      try {
+        const code = await addFriendByUid(opponentUid);
+        showStatus("matchFriendStatus", "Vous êtes maintenant amis ! 🎉 Code : " + code, "success");
+        $("addOpponentFriendBtn").textContent = "✓ Vous êtes amis";
+      } catch (error) {
+        showStatus("matchFriendStatus", friendlyError(error), "error");
+      } finally {
+        $("addOpponentFriendBtn").disabled = false;
+      }
     }
 
     async function createRoom() {
@@ -831,6 +1022,11 @@ async function joinRoom() {
       $("room").classList.remove("hidden");
       updateOrientationMode();
       $("roomCodeDisplay").textContent = code;
+      if (myPlayerNumber === 1) {
+        ensureAuth().then(user => db.ref("userPresence/" + user.uid + "/activeRoom").set(code)).catch(() => {});
+      }
+      hideStatus("matchFriendStatus");
+      $("addOpponentFriendBtn").textContent = "👥 Ajouter cet adversaire comme ami";
       if (roomListener && roomRef) roomRef.off("value", roomListener);
       roomListener = snapshot => {
         currentRoomData = snapshot.val();
@@ -877,6 +1073,20 @@ async function joinRoom() {
       }
       previousResultEventKey = resultEventKey;
 
+      const opponentActionEventKey = room.lastActionEventId
+        ? String(room.lastActionEventId)
+        : (room.lastActionBy && room.lastAction ? String(room.round || 1) + ":" + room.lastActionBy + ":" + room.lastAction : null);
+      if (
+        opponentActionEventKey &&
+        opponentActionEventKey !== previousOpponentActionEventKey &&
+        room.lastActionBy &&
+        room.lastActionBy !== myPlayerNumber &&
+        room.lastAction === "improve"
+      ) {
+        playSound("opponentImprove");
+      }
+      previousOpponentActionEventKey = opponentActionEventKey;
+
       const myAccepted = myPlayerNumber === 1 ? !!room.accepted1 : !!room.accepted2;
       const otherAccepted = myPlayerNumber === 1 ? !!room.accepted2 : !!room.accepted1;
       const requestBy = room.improveRequestedBy;
@@ -908,8 +1118,8 @@ async function joinRoom() {
         $("offerStatus").textContent = "Les deux joueurs ont accepté ! Nouveau round.";
       } else if (requestBy) {
         $("offerStatus").textContent = requestBy === myPlayerNumber
-          ? "📨 DEMANDE ENVOYÉE : l'autre joueur doit améliorer son offre avant de continuer ou refuser X."
-          : "🔔 DEMANDE D'AMÉLIORATION : l'autre joueur te demande d'AJOUTER quelque chose à ton offre ! Améliore ton offre ou refuse X.";
+          ? "📨 DEMANDE ENVOYÉE : l'autre joueur doit améliorer son offre avant de continuer ou  refuser ✕."
+          : "🔔 DEMANDE D'AMÉLIORATION : l'autre joueur te demande d'AJOUTER quelque chose à ton offre ! Améliore ton offre ou refuse ✕.";
       } else if (myAccepted) {
         $("offerStatus").textContent = "Tu as accepté. En attente de l'autre joueur.";
       } else if (otherAccepted) {
@@ -947,6 +1157,7 @@ async function joinRoom() {
           // Chaque joueur peut remplacer sa décision tant que le round est actif.
           room.lastActionBy = myPlayerNumber;
           room.lastAction = action;
+          room.lastActionEventId = Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 9);
 
           if (action === "accept") {
             room[mineKey] = true;
@@ -994,7 +1205,14 @@ async function joinRoom() {
     }
 
     function leaveRoom() {
+      const oldCode = currentRoomCode;
       if (roomRef && roomListener) roomRef.off("value", roomListener);
+      if (myPlayerNumber === 1 && auth.currentUser && oldCode) {
+        const presenceRef = db.ref("userPresence/" + auth.currentUser.uid + "/activeRoom");
+        presenceRef.once("value").then(snap => {
+          if (snap.val() === oldCode) presenceRef.remove();
+        }).catch(() => {});
+      }
       currentRoomCode = null; myPlayerNumber = null; roomListener = null; roomRef = null; currentRoomData = null;
       $("room").classList.add("hidden");
       $("home").classList.remove("hidden");
@@ -1012,25 +1230,46 @@ async function joinRoom() {
     }
 
     applyTheme(savedTheme, savedThemeColor);
-
-    // Préférences de son enregistrées séparément sur chaque appareil.
-    $("soundEnabled").checked = soundEnabled;
-    $("soundVolume").value = soundVolume;
-    $("soundVolumeValue").textContent = soundVolume + " %";
-    $("soundEnabled").addEventListener("change", () => {
-      soundEnabled = $("soundEnabled").checked;
-      try { localStorage.setItem("fidgetTradingSoundEnabled", String(soundEnabled)); } catch (_) {}
-    });
-    $("soundVolume").addEventListener("input", () => {
-      soundVolume = Number($("soundVolume").value);
-      $("soundVolumeValue").textContent = soundVolume + " %";
-      try { localStorage.setItem("fidgetTradingSoundVolume", String(soundVolume)); } catch (_) {}
-    });
-
-    $("openSettingsBtn").addEventListener("click", openSettings);
     $("backSettingsBtn").addEventListener("click", closeSettings);
     $("themeSelect").addEventListener("change", () => applyTheme($("themeSelect").value, $("themeColor").value));
     $("themeColor").addEventListener("input", () => applyTheme("normal", $("themeColor").value));
+    updateSoundSettings();
+    $("soundEnabled").addEventListener("change", () => {
+      soundEnabled = $("soundEnabled").checked;
+      updateSoundSettings();
+    });
+    $("soundVolume").addEventListener("input", () => {
+      soundVolume = Number($("soundVolume").value);
+      updateSoundSettings();
+    });
+    $("openSettingsBtn").addEventListener("click", () => {
+      openSettings();
+      ensureFriendCode().then(code => $("myFriendCode").textContent = code)
+        .then(refreshFriendLists)
+        .catch(error => showStatus("friendSettingsStatus", friendlyError(error), "error"));
+    });
+    $("copyFriendCodeBtn").addEventListener("click", async () => {
+      try {
+        const code = await ensureFriendCode();
+        await navigator.clipboard.writeText(code);
+        showStatus("friendSettingsStatus", "Code copié ! Envoie-le à ton ami.", "success");
+      } catch (_) {
+        showStatus("friendSettingsStatus", "Ton code : " + $("myFriendCode").textContent, "success");
+      }
+    });
+    $("addFriendByCodeBtn").addEventListener("click", addFriendByCode);
+    $("friendCodeInput").addEventListener("input", e => e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,6));
+    $("friendCodeInput").addEventListener("keydown", e => { if (e.key === "Enter") addFriendByCode(); });
+    $("showFriendsBtn").addEventListener("click", async () => {
+      $("friendJoinPanel").classList.toggle("hidden");
+      if (!$("friendJoinPanel").classList.contains("hidden")) {
+        try { await refreshFriendLists(); }
+        catch (error) { showStatus("friendJoinStatus", friendlyError(error), "error"); }
+      }
+    });
+    $("refreshFriendsBtn").addEventListener("click", () => refreshFriendLists().catch(error => showStatus("friendJoinStatus", friendlyError(error), "error")));
+    $("joinFriendBtn").addEventListener("click", joinSelectedFriend);
+    $("addOpponentFriendBtn").addEventListener("click", addCurrentOpponentAsFriend);
 
     $("createBtn").addEventListener("click", createRoom);
     $("showJoinBtn").addEventListener("click", () => {
@@ -1060,6 +1299,7 @@ async function joinRoom() {
     });
     $("rejectBtn").addEventListener("click", () => {
       if (!rejectArmed) {
+        playSound("rejectArmed");
         rejectArmed = true;
         $("rejectBtn").textContent = "✕ ?";
         $("rejectBtn").setAttribute("aria-label", "Confirmer le refus");
@@ -1087,8 +1327,13 @@ async function joinRoom() {
     });
 
     auth.onAuthStateChanged(user => {
-      if (!user) return;
-      // La connexion anonyme est prête; le joueur crée ou rejoint une partie.
+      if (!user) {
+        auth.signInAnonymously().catch(error => showStatus("homeStatus", friendlyError(error), "error"));
+        return;
+      }
+      ensureFriendCode().then(code => {
+        if (!$("settingsPage").classList.contains("hidden")) $("myFriendCode").textContent = code;
+      }).catch(error => console.warn("Code ami indisponible :", error));
     });
   </script>
 </body>
