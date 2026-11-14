@@ -64,6 +64,26 @@
     body[data-theme="christmas"] #acceptBtn { background:#dff0e1 !important; color:#176b37 !important; }
     body[data-theme="halloween"] #improveBtn { background:#4a2b16 !important; color:#ffc04d !important; }
     body[data-theme="christmas"] #improveBtn { background:#f8e7d5 !important; color:#9a4b13 !important; }
+    .sound-settings {
+      margin-top:22px; padding:16px; border:1px solid var(--line);
+      border-radius:16px; background:var(--surface-tint);
+    }
+    .sound-settings h3 { margin:0 0 14px; color:var(--purple-dark); }
+    .sound-toggle {
+      display:flex; align-items:center; gap:10px; cursor:pointer;
+      font-size:15px; margin:0 0 16px;
+    }
+    .sound-toggle input {
+      width:22px; height:22px; margin:0; accent-color:var(--purple);
+      flex:0 0 auto;
+    }
+    #soundVolume {
+      padding:0; border:0; accent-color:var(--purple);
+      cursor:pointer; background:transparent;
+    }
+    .sound-settings .field { margin-bottom:6px; }
+    body[data-theme="halloween"] .sound-settings { background:#302116; }
+    body[data-theme="halloween"] .sound-settings h3 { color:#ffb15c; }
     * { box-sizing:border-box; }
     body {
       margin:0; min-height:100vh; color:var(--ink);
@@ -360,6 +380,18 @@
           <span class="muted small">Choisis ta couleur préférée.</span>
         </div>
       </div>
+      <div class="field sound-settings">
+        <h3>🔊 Sons</h3>
+        <label class="sound-toggle" for="soundEnabled">
+          <input id="soundEnabled" type="checkbox" checked>
+          Activer les sons
+        </label>
+        <div class="field">
+          <label for="soundVolume">Volume : <span id="soundVolumeValue">70 %</span></label>
+          <input id="soundVolume" type="range" min="0" max="100" value="70" step="1">
+        </div>
+        <p class="muted small">Ces réglages s'appliquent à tous les sons et sont enregistrés sur cet appareil.</p>
+      </div>
       <div class="notice">Ton choix s'applique immédiatement et reste enregistré même après avoir fermé le site.</div>
     </section>
 
@@ -454,9 +486,16 @@
     const $ = id => document.getElementById(id);
     let savedTheme = "normal";
     let savedThemeColor = "#16834b";
+    let soundEnabled = true;
+    let soundVolume = 70;
     try {
       savedTheme = localStorage.getItem("fidgetTradingTheme") || "normal";
       savedThemeColor = localStorage.getItem("fidgetTradingColor") || "#16834b";
+      soundEnabled = localStorage.getItem("fidgetTradingSoundEnabled") !== "false";
+      const storedVolume = localStorage.getItem("fidgetTradingSoundVolume");
+      if (storedVolume !== null && Number.isFinite(Number(storedVolume))) {
+        soundVolume = Math.max(0, Math.min(100, Number(storedVolume)));
+      }
     } catch (_) {}
     function updateOrientationMode() {
       document.body.classList.toggle(
@@ -526,6 +565,8 @@
     // Sons générés par le navigateur (aucun fichier externe requis).
     let soundContext = null;
     function playTone(frequency, duration, wave = "sine", volume = 0.16, delay = 0, endFrequency = null) {
+      if (!soundEnabled || soundVolume <= 0) return;
+      volume *= soundVolume / 100;
       try {
         const AudioCtx = window.AudioContext || window.webkitAudioContext;
         if (!AudioCtx) return;
@@ -867,8 +908,8 @@ async function joinRoom() {
         $("offerStatus").textContent = "Les deux joueurs ont accepté ! Nouveau round.";
       } else if (requestBy) {
         $("offerStatus").textContent = requestBy === myPlayerNumber
-          ? "📨 DEMANDE ENVOYÉE : l'autre joueur doit améliorer son offre avant de continuer."
-          : "🔔 DEMANDE D'AMÉLIORATION : l'autre joueur te demande d'AJOUTER quelque chose à ton offre ! Améliore ton offre, puis choisis ✓, ＋ ou ✕.";
+          ? "📨 DEMANDE ENVOYÉE : l'autre joueur doit améliorer son offre avant de continuer ou refuser X."
+          : "🔔 DEMANDE D'AMÉLIORATION : l'autre joueur te demande d'AJOUTER quelque chose à ton offre ! Améliore ton offre ou refuse X.";
       } else if (myAccepted) {
         $("offerStatus").textContent = "Tu as accepté. En attente de l'autre joueur.";
       } else if (otherAccepted) {
@@ -971,6 +1012,21 @@ async function joinRoom() {
     }
 
     applyTheme(savedTheme, savedThemeColor);
+
+    // Préférences de son enregistrées séparément sur chaque appareil.
+    $("soundEnabled").checked = soundEnabled;
+    $("soundVolume").value = soundVolume;
+    $("soundVolumeValue").textContent = soundVolume + " %";
+    $("soundEnabled").addEventListener("change", () => {
+      soundEnabled = $("soundEnabled").checked;
+      try { localStorage.setItem("fidgetTradingSoundEnabled", String(soundEnabled)); } catch (_) {}
+    });
+    $("soundVolume").addEventListener("input", () => {
+      soundVolume = Number($("soundVolume").value);
+      $("soundVolumeValue").textContent = soundVolume + " %";
+      try { localStorage.setItem("fidgetTradingSoundVolume", String(soundVolume)); } catch (_) {}
+    });
+
     $("openSettingsBtn").addEventListener("click", openSettings);
     $("backSettingsBtn").addEventListener("click", closeSettings);
     $("themeSelect").addEventListener("change", () => applyTheme($("themeSelect").value, $("themeColor").value));
