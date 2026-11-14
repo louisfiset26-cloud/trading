@@ -522,6 +522,47 @@
       updateOrientationMode();
     }
 
+
+    // Sons courts générés directement par le navigateur (aucun fichier externe requis).
+    let soundContext = null;
+    function playTone(frequency, duration, wave = "sine", volume = 0.16, delay = 0) {
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        if (!soundContext) soundContext = new AudioCtx();
+        if (soundContext.state === "suspended") soundContext.resume();
+        const start = soundContext.currentTime + delay;
+        const oscillator = soundContext.createOscillator();
+        const gain = soundContext.createGain();
+        oscillator.type = wave;
+        oscillator.frequency.setValueAtTime(frequency, start);
+        gain.gain.setValueAtTime(0.0001, start);
+        gain.gain.exponentialRampToValueAtTime(volume, start + 0.015);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+        oscillator.connect(gain);
+        gain.connect(soundContext.destination);
+        oscillator.start(start);
+        oscillator.stop(start + duration + 0.02);
+      } catch (_) {}
+    }
+    function playSound(name) {
+      if (name === "accept") {
+        playTone(660, 0.12, "sine", 0.13);
+        playTone(880, 0.16, "sine", 0.13, 0.12);
+      } else if (name === "improve") {
+        playTone(520, 0.11, "triangle", 0.14);
+        playTone(390, 0.16, "triangle", 0.14, 0.12);
+      } else if (name === "reject") {
+        playTone(240, 0.2, "sawtooth", 0.10);
+      } else if (name === "bothAccepted") {
+        playTone(523, 0.14, "sine", 0.14);
+        playTone(659, 0.14, "sine", 0.14, 0.14);
+        playTone(784, 0.22, "sine", 0.15, 0.28);
+      }
+    }
+    let previousAcceptedRound = null;
+    let previousAcceptedState = false;
+
     let currentRoomCode = null;
     let myPlayerNumber = null;
     let roomListener = null;
@@ -714,6 +755,13 @@ async function joinRoom() {
       $("starterText").textContent = "Décision des deux joueurs";
       const accepted = Number(!!room.accepted1) + Number(!!room.accepted2);
       $("progressBar").style.width = (accepted * 50) + "%";
+      const bothAcceptedNow = !!room.accepted1 && !!room.accepted2;
+      const acceptedRoundKey = String(room.round || 1) + ":" + String(room.lastResult || "");
+      if (bothAcceptedNow && (!previousAcceptedState || previousAcceptedRound !== acceptedRoundKey)) {
+        playSound("bothAccepted");
+      }
+      previousAcceptedState = bothAcceptedNow;
+      previousAcceptedRound = acceptedRoundKey;
 
       const myAccepted = myPlayerNumber === 1 ? !!room.accepted1 : !!room.accepted2;
       const otherAccepted = myPlayerNumber === 1 ? !!room.accepted2 : !!room.accepted1;
@@ -746,8 +794,8 @@ async function joinRoom() {
         $("offerStatus").textContent = "Les deux joueurs ont accepté ! Nouveau round.";
       } else if (requestBy) {
         $("offerStatus").textContent = requestBy === myPlayerNumber
-          ? "📨 DEMANDE ENVOYÉE : l'autre joueur doit améliorer son offre avant de continuer ou refuser X."
-          : "🔔 DEMANDE D'AMÉLIORATION : l'autre joueur te demande d'AJOUTER quelque chose à ton offre ! Améliore ton offre ou refuse X.";
+          ? "📨 DEMANDE ENVOYÉE : l'autre joueur doit améliorer son offre avant de continuer."
+          : "🔔 DEMANDE D'AMÉLIORATION : l'autre joueur te demande d'AJOUTER quelque chose à ton offre ! Améliore ton offre, puis choisis ✓, ＋ ou ✕.";
       } else if (myAccepted) {
         $("offerStatus").textContent = "Tu as accepté. En attente de l'autre joueur.";
       } else if (otherAccepted) {
@@ -864,6 +912,7 @@ async function joinRoom() {
     $("roomCodeInput").addEventListener("input", e => e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,6));
     $("roomCodeInput").addEventListener("keydown", e => { if (e.key === "Enter") joinRoom(); });
     $("acceptBtn").addEventListener("click", () => {
+      playSound("accept");
       rejectArmed = false;
       if (rejectTimer) clearTimeout(rejectTimer);
       $("rejectBtn").textContent = "✕";
@@ -872,6 +921,7 @@ async function joinRoom() {
       submitDecision("accept");
     });
     $("improveBtn").addEventListener("click", () => {
+      playSound("improve");
       rejectArmed = false;
       if (rejectTimer) clearTimeout(rejectTimer);
       $("rejectBtn").textContent = "✕";
@@ -899,6 +949,7 @@ async function joinRoom() {
       $("rejectBtn").textContent = "✕";
       $("rejectBtn").setAttribute("aria-label", "Refuser");
       $("rejectBtn").title = "Refuser";
+      playSound("reject");
       submitDecision("reject");
     });
     $("leaveBtn").addEventListener("click", leaveRoom);
