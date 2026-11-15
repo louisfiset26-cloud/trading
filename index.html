@@ -110,6 +110,14 @@
     .friend-item strong { overflow-wrap:anywhere; }
     .friend-join-panel { margin-top:16px; padding-top:14px; border-top:1px solid var(--line); }
     .add-friend-match { display:none; }
+    #finishBtn { display:none; }
+    .summary-panel { margin-top:16px; padding:18px; border-radius:18px; background:var(--surface-tint); }
+    .summary-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:12px; }
+    .summary-player { padding:12px; border-radius:14px; background:rgba(255,255,255,.72); }
+    .summary-player h3 { margin:0 0 9px; font-size:16px; }
+    .summary-stat { display:flex; justify-content:space-between; gap:8px; padding:5px 0; border-bottom:1px solid var(--line); font-size:14px; }
+    .summary-stat:last-child { border-bottom:0; }
+    @media (orientation: portrait) and (max-width: 900px) { #finishBtn { display:block; } }
     .theme-select {
       width:100%; border:2px solid var(--line); border-radius:13px;
       padding:14px 15px; background:#fff; color:var(--ink); font:inherit;
@@ -464,6 +472,8 @@
           <button id="rejectBtn" class="btn danger">✕</button>
         </div>
         <p id="actionHint" class="small muted center">✓ Accepter · ＋ Demander une amélioration · ✕ Refuser</p>
+        <button id="finishBtn" class="btn danger full" style="margin-top:8px">🏁 Terminer</button>
+        <div id="summaryPanel" class="summary-panel hidden" aria-live="polite"></div>
         <p id="gameStatus" class="notice hidden" role="status"></p>
       </div>
 
@@ -708,6 +718,8 @@
     let busy = false;
     let rejectArmed = false;
     let rejectTimer = null;
+    let finishArmed = false;
+    let finishTimer = null;
 
     function showStatus(id, message, type = "") {
       const el = $(id);
@@ -720,7 +732,7 @@
       busy = value;
       $("createBtn").disabled = value;
       $("joinBtn").disabled = value;
-      ["acceptBtn", "improveBtn", "rejectBtn"].forEach(id => {
+      ["acceptBtn", "improveBtn", "rejectBtn", "finishBtn"].forEach(id => {
         const button = $(id);
         if (button) button.disabled = value;
       });
@@ -923,6 +935,7 @@
                 accepted2: false,
                 improveRequestedBy: null,
                 lastResult: null,
+                stats: { player1: { accept: 0, improve: 0, reject: 0 }, player2: { accept: 0, improve: 0, reject: 0 }, completedRounds: 0 },
                 lastActionBy: null,
                 lastAction: null
               };
@@ -1053,6 +1066,24 @@ async function joinRoom() {
       $("gamePanel").classList.toggle("hidden", !p2Joined);
       if (!p2Joined) return;
 
+      const finished = room.status === "finished";
+      $("summaryPanel").classList.toggle("hidden", !finished);
+      $("offerStatus").classList.toggle("hidden", finished);
+      $("opponentAction").classList.toggle("hidden", finished);
+      $("progressBar").parentElement.classList.toggle("hidden", finished);
+      $("acceptBtn").classList.toggle("hidden", finished);
+      $("improveBtn").classList.toggle("hidden", finished);
+      $("rejectBtn").classList.toggle("hidden", finished);
+      $("actionHint").classList.toggle("hidden", finished);
+      $("finishBtn").classList.toggle("hidden", finished);
+      if (finished) {
+        const stats = room.stats || {};
+        const p1 = stats.player1 || {};
+        const p2 = stats.player2 || {};
+        const statRow = (label, key) => `<div class="summary-stat"><span>${label}</span><strong>${Number(key || 0)}</strong></div>`;
+        $("summaryPanel").innerHTML = `<h2 style="margin:0;text-align:center">🏁 Résumé de la partie</h2><p class="small muted center">Partie terminée par le joueur ${room.finishedBy || "?"}.</p><div class="summary-grid"><div class="summary-player"><h3>Joueur 1</h3>${statRow("✓ Accepter", p1.accept)}${statRow("＋ Améliorer", p1.improve)}${statRow("✕ Refuser", p1.reject)}</div><div class="summary-player"><h3>Joueur 2</h3>${statRow("✓ Accepter", p2.accept)}${statRow("＋ Améliorer", p2.improve)}${statRow("✕ Refuser", p2.reject)}</div></div><p class="center" style="font-weight:900;margin:14px 0 0">Manches terminées : ${Number(stats.completedRounds || 0)}</p>`;
+        return;
+      }
       $("roundNumber").textContent = room.round || 1;
       $("starterText").textContent = "Décision des deux joueurs";
       const accepted = Number(!!room.accepted1) + Number(!!room.accepted2);
@@ -1118,8 +1149,8 @@ async function joinRoom() {
         $("offerStatus").textContent = "Les deux joueurs ont accepté ! Nouveau round.";
       } else if (requestBy) {
         $("offerStatus").textContent = requestBy === myPlayerNumber
-          ? "📨 DEMANDE ENVOYÉE : l'autre joueur doit améliorer son offre avant de continuer ou  refuser ✕."
-          : "🔔 DEMANDE D'AMÉLIORATION : l'autre joueur te demande d'AJOUTER quelque chose à ton offre ! Améliore ton offre ou refuse ✕.";
+          ? "📨 DEMANDE ENVOYÉE : l'autre joueur doit améliorer son offre avant de continuer."
+          : "🔔 DEMANDE D'AMÉLIORATION : l'autre joueur te demande d'AJOUTER quelque chose à ton offre ! Améliore ton offre, puis choisis ✓, ＋ ou ✕.";
       } else if (myAccepted) {
         $("offerStatus").textContent = "Tu as accepté. En attente de l'autre joueur.";
       } else if (otherAccepted) {
@@ -1158,6 +1189,10 @@ async function joinRoom() {
           room.lastActionBy = myPlayerNumber;
           room.lastAction = action;
           room.lastActionEventId = Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 9);
+          room.stats = room.stats || { player1: { accept: 0, improve: 0, reject: 0 }, player2: { accept: 0, improve: 0, reject: 0 }, completedRounds: 0 };
+          const statsKey = myPlayerNumber === 1 ? "player1" : "player2";
+          room.stats[statsKey] = room.stats[statsKey] || { accept: 0, improve: 0, reject: 0 };
+          room.stats[statsKey][action] = Number(room.stats[statsKey][action] || 0) + 1;
 
           if (action === "accept") {
             room[mineKey] = true;
@@ -1171,6 +1206,7 @@ async function joinRoom() {
               room.accepted2 = false;
               room.improveRequestedBy = null;
               room.lastResult = "accepted";
+              room.stats.completedRounds = Number(room.stats.completedRounds || 0) + 1;
             } else {
               room.lastResult = null;
             }
@@ -1188,6 +1224,7 @@ async function joinRoom() {
             room.accepted2 = false;
             room.improveRequestedBy = null;
             room.lastResult = "rejected";
+            room.stats.completedRounds = Number(room.stats.completedRounds || 0) + 1;
           }
 
           return room;
@@ -1319,6 +1356,31 @@ async function joinRoom() {
       $("rejectBtn").setAttribute("aria-label", "Refuser");
       $("rejectBtn").title = "Refuser";
       submitDecision("reject");
+    });
+    $("finishBtn").addEventListener("click", async () => {
+      if (!finishArmed) {
+        finishArmed = true;
+        $("finishBtn").textContent = "🏁 Confirmer la fin ?";
+        if (finishTimer) clearTimeout(finishTimer);
+        finishTimer = setTimeout(() => { finishArmed = false; $("finishBtn").textContent = "🏁 Terminer"; }, 4000);
+        return;
+      }
+      finishArmed = false;
+      if (finishTimer) clearTimeout(finishTimer);
+      $("finishBtn").textContent = "🏁 Terminer";
+      if (!roomRef || busy) return;
+      setBusy(true);
+      try {
+        const result = await roomRef.transaction(room => {
+          if (!room || room.status !== "playing" || !room.player2) return;
+          room.status = "finished";
+          room.finishedBy = myPlayerNumber;
+          room.finishedAt = firebase.database.ServerValue.TIMESTAMP;
+          return room;
+        }, undefined, false);
+        if (!result.committed) showStatus("gameStatus", "La partie est déjà terminée ou impossible à terminer.", "error");
+      } catch (error) { showStatus("gameStatus", friendlyError(error), "error"); }
+      finally { setBusy(false); if (currentRoomData) renderRoom(currentRoomData); }
     });
     $("leaveBtn").addEventListener("click", leaveRoom);
     $("copyCodeBtn").addEventListener("click", async () => {
